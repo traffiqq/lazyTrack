@@ -73,6 +73,8 @@ type App struct {
 	assigning     bool
 	assignInput   textinput.Model
 	finderDialog   FinderDialog
+	projectPicker  ProjectPickerDialog
+	activeProject  *model.Project
 	restoreIssueID string
 	statePath      string
 }
@@ -105,7 +107,7 @@ func NewApp(service IssueService, state config.State) *App {
 	asi.Placeholder = "User login"
 	asi.Prompt = "Assign to: "
 
-	return &App{
+	app := &App{
 		service:      service,
 		list:         l,
 		detail:       vp,
@@ -121,16 +123,34 @@ func NewApp(service IssueService, state config.State) *App {
 		stateInput:   sti,
 		assignInput:  asi,
 		finderDialog: NewFinderDialog(),
+		projectPicker: NewProjectPickerDialog(),
 	}
+
+	// Restore active project from state
+	if state.UI.ActiveProject != "" {
+		app.activeProject = &model.Project{ShortName: state.UI.ActiveProject}
+	}
+
+	return app
 }
 
 func (a *App) Init() tea.Cmd {
 	return a.fetchIssuesCmd()
 }
 
+// effectiveQuery returns the search query with project filter prepended if applicable.
+func (a *App) effectiveQuery() string {
+	query := a.query
+	if a.activeProject != nil && !strings.Contains(strings.ToLower(query), "project:") {
+		query = "project: " + a.activeProject.ShortName + " " + query
+		query = strings.TrimSpace(query)
+	}
+	return query
+}
+
 // fetchIssuesCmd creates a command that fetches issues. Captures current query value.
 func (a *App) fetchIssuesCmd() tea.Cmd {
-	query := a.query
+	query := a.effectiveQuery()
 	service := a.service
 	return func() tea.Msg {
 		issues, err := service.ListIssues(query, 0, 50)
@@ -291,6 +311,15 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 
+	case projectsForPickerMsg:
+		a.loading = false
+		if len(msg.projects) == 0 {
+			a.err = "No projects found"
+			return a, nil
+		}
+		a.projectPicker.Open(msg.projects)
+		return a, nil
+
 	case tea.KeyMsg:
 		// When create dialog is active, route input to it
 		if a.createDialog.active {
@@ -345,6 +374,18 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.resizePanels()
 				a.loading = true
 				return a, a.fetchDetailCmd(issueID)
+			}
+			return a, cmd
+		}
+
+		// When project picker is active, route input to it
+		if a.projectPicker.active {
+			var cmd tea.Cmd
+			a.projectPicker, cmd = a.projectPicker.Update(msg)
+			if a.projectPicker.submitted {
+				a.activeProject = a.projectPicker.selectedProject
+				a.loading = true
+				return a, a.fetchIssuesCmd()
 			}
 			return a, cmd
 		}
@@ -533,6 +574,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if a.selected != nil {
 				state.UI.SelectedIssue = a.selected.IDReadable
 			}
+			if a.activeProject != nil {
+				state.UI.ActiveProject = a.activeProject.ShortName
+			}
 			_ = config.SaveStateToPath(a.statePath, state)
 			return a, tea.Quit
 		case "tab":
@@ -622,6 +666,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.assignInput.SetValue("")
 				return a, a.assignInput.Focus()
 			}
+		case "p":
+			a.loading = true
+			service := a.service
+			return a, func() tea.Msg {
+				projects, err := service.ListProjects()
+				if err != nil {
+					return errMsg{err}
+				}
+				return projectsForPickerMsg{projects}
+			}
 		case "f":
 			return a, a.finderDialog.Open()
 		}
@@ -670,6 +724,9 @@ func (a *App) View() string {
 	// Render overlays if active
 	if a.finderDialog.active {
 		return a.finderDialog.View(a.width, a.height)
+	}
+	if a.projectPicker.active {
+		return a.projectPicker.View(a.width, a.height)
 	}
 	if a.showHelp {
 		return renderHelp(a.width, a.height)
@@ -772,6 +829,9 @@ func (a *App) renderStatusBar() string {
 	}
 
 	left := " lazytrack"
+	if a.activeProject != nil {
+		left += fmt.Sprintf(" | project: %s", a.activeProject.ShortName)
+	}
 	if a.query != "" {
 		left += fmt.Sprintf(" | query: %s", a.query)
 	}
@@ -779,7 +839,7 @@ func (a *App) renderStatusBar() string {
 		left += " | loading..."
 	}
 
-	right := "tab:switch  ctrl+e:collapse  H/L:resize  /:search  f:find  c:create  e:edit  d:delete  C:comment  q:quit  ?:help"
+	right := "tab:switch  ctrl+e:collapse  H/L:resize  /:search  f:find  p:project  #:goto  c:create  e:edit  d:delete  C:comment  q:quit  ?:help"
 
 	gap := a.width - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 0 {
