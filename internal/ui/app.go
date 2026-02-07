@@ -86,6 +86,7 @@ func NewApp(service IssueService, state config.State) *App {
 	delegate := list.NewDefaultDelegate()
 	l := list.New([]list.Item{}, delegate, 0, 0)
 	l.Title = ""
+	l.SetShowTitle(false)
 	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
@@ -930,5 +931,5 @@ func (a *App) renderStatusBar() string {
 	}
 
 	content := left + strings.Repeat(" ", gap) + right
-	return statusBarStyle.Width(availWidth).Render(content)
+	return statusBarStyle.MaxWidth(a.width).Render(content)
 }
