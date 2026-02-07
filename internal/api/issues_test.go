@@ -134,12 +134,53 @@ func TestClient_CreateIssue(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "test-token")
-	issue, err := client.CreateIssue("0-0", "New issue", "Description here")
+	issue, err := client.CreateIssue("0-0", "New issue", "Description here", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if issue.IDReadable != "PROJ-2" {
 		t.Errorf("got ID %q, want %q", issue.IDReadable, "PROJ-2")
+	}
+}
+
+func TestClient_CreateIssue_WithCustomFields(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]any
+		json.Unmarshal(body, &payload)
+
+		cf, ok := payload["customFields"].([]any)
+		if !ok {
+			t.Fatal("customFields missing or wrong type")
+		}
+		if len(cf) != 2 {
+			t.Errorf("got %d custom fields, want 2", len(cf))
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"id":"2-3","idReadable":"PROJ-3","summary":"With fields"}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-token")
+	customFields := []map[string]any{
+		{
+			"name":  "State",
+			"$type": "StateIssueCustomField",
+			"value": map[string]string{"name": "Open", "$type": "StateBundleElement"},
+		},
+		{
+			"name":  "Type",
+			"$type": "SingleEnumIssueCustomField",
+			"value": map[string]string{"name": "Bug", "$type": "EnumBundleElement"},
+		},
+	}
+	issue, err := client.CreateIssue("0-0", "With fields", "Desc", customFields)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if issue.IDReadable != "PROJ-3" {
+		t.Errorf("got ID %q, want %q", issue.IDReadable, "PROJ-3")
 	}
 }
 

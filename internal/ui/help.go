@@ -23,6 +23,11 @@ Actions:
   #           Go to issue by number
   r           Refresh
 
+Dialogs & Comments:
+  tab/shift+tab   Navigate fields
+  ctrl+s          Submit
+  esc             Cancel
+
 General:
   H/L, ctrl+←/→  Resize panels
   ctrl+e          Toggle issue list

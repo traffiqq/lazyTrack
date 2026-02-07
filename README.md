@@ -70,7 +70,7 @@ server:
 | `c` | Create issue |
 | `e` | Edit issue |
 | `d` | Delete issue (confirm with `y`/`n`) |
-| `C` | Add comment (`ctrl+d` to submit, `esc` to cancel) |
+| `C` | Add comment (`ctrl+s` to submit, `esc` to cancel) |
 | `/` | Search/filter with YouTrack query (`enter` to apply, `esc` to cancel) |
 | `f` | Find issue (fuzzy finder) |
 | `s` | Set state (`enter` to apply, `esc` to cancel) |

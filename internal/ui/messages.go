@@ -44,3 +44,16 @@ type finderSearchResultsMsg struct {
 	issues     []model.Issue
 	generation int
 }
+
+type assigneeDebounceMsg struct {
+	generation int
+}
+
+type assigneeSearchResultsMsg struct {
+	users      []model.User
+	generation int
+}
+
+type customFieldsLoadedMsg struct {
+	fields []model.ProjectCustomField
+}

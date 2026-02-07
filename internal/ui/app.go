@@ -70,8 +70,7 @@ type App struct {
 	hasMore     bool
 	searchInput  textinput.Model
 	searching    bool
-	createDialog CreateDialog
-	editDialog   EditDialog
+	issueDialog IssueDialog
 	confirmDelete bool
 	commenting    bool
 	commentInput  textarea.Model
@@ -143,8 +142,7 @@ func NewApp(service IssueService, state config.State) *App {
 		restoreIssueID: state.UI.SelectedIssue,
 		statePath:      config.DefaultStatePath(),
 		searchInput:  si,
-		createDialog: NewCreateDialog(),
-		editDialog:   NewEditDialog(),
+		issueDialog: NewIssueDialog(),
 		commentInput: ci,
 		stateInput:   sti,
 		assignInput:  asi,
@@ -294,9 +292,52 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case projectsLoadedMsg:
 		a.loading = false
-		a.createDialog.SetProjects(msg.projects)
-		cmd := a.createDialog.Open()
+		cmd := a.issueDialog.OpenCreate(msg.projects)
+		if len(msg.projects) > 0 {
+			projectID := msg.projects[0].ID
+			service := a.service
+			return a, tea.Batch(cmd, func() tea.Msg {
+				fields, err := service.ListProjectCustomFields(projectID)
+				if err != nil {
+					return errMsg{err}
+				}
+				return customFieldsLoadedMsg{fields}
+			})
+		}
 		return a, cmd
+
+	case customFieldsLoadedMsg:
+		if a.issueDialog.active {
+			currentState := ""
+			currentType := ""
+			if a.issueDialog.mode == modeEdit && a.selected != nil {
+				currentState = a.selected.StateValue()
+				currentType = a.selected.TypeValue()
+			}
+			a.issueDialog.SetCustomFields(msg.fields, currentState, currentType)
+		}
+		return a, nil
+
+	case assigneeDebounceMsg:
+		if a.issueDialog.active && msg.generation == a.issueDialog.assigneeGen {
+			query := a.issueDialog.assigneeInput.Value()
+			service := a.service
+			gen := msg.generation
+			return a, func() tea.Msg {
+				users, err := service.SearchUsers(query)
+				if err != nil {
+					return errMsg{err}
+				}
+				return assigneeSearchResultsMsg{users: users, generation: gen}
+			}
+		}
+		return a, nil
+
+	case assigneeSearchResultsMsg:
+		if a.issueDialog.active {
+			a.issueDialog.SetAssigneeResults(msg.users, msg.generation)
+		}
+		return a, nil
 
 	case issueCreatedMsg:
 		a.loading = false
@@ -364,43 +405,58 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyMsg:
-		// When create dialog is active, route input to it
-		if a.createDialog.active {
+		// When issue dialog is active, route input to it
+		if a.issueDialog.active {
 			var cmd tea.Cmd
-			a.createDialog, cmd = a.createDialog.Update(msg)
-			if a.createDialog.submitted {
-				projectID, summary, desc := a.createDialog.Values()
+			a.issueDialog, cmd = a.issueDialog.Update(msg)
+			if a.issueDialog.submitted {
 				service := a.service
 				a.loading = true
-				return a, func() tea.Msg {
-					_, err := service.CreateIssue(projectID, summary, desc)
-					if err != nil {
-						return errMsg{err}
+				customFields := a.issueDialog.buildCustomFields()
+				if a.issueDialog.mode == modeCreate {
+					projectID := ""
+					if len(a.issueDialog.projects) > 0 {
+						projectID = a.issueDialog.projects[a.issueDialog.projectIndex].ID
 					}
-					return issueCreatedMsg{}
+					summary := a.issueDialog.summaryInput.Value()
+					desc := a.issueDialog.descInput.Value()
+					return a, func() tea.Msg {
+						_, err := service.CreateIssue(projectID, summary, desc, customFields)
+						if err != nil {
+							return errMsg{err}
+						}
+						return issueCreatedMsg{}
+					}
+				} else {
+					issueID := a.issueDialog.issueID
+					summary := a.issueDialog.summaryInput.Value()
+					desc := a.issueDialog.descInput.Value()
+					return a, func() tea.Msg {
+						fields := map[string]any{
+							"summary":      summary,
+							"description":  desc,
+							"customFields": customFields,
+						}
+						err := service.UpdateIssue(issueID, fields)
+						if err != nil {
+							return errMsg{err}
+						}
+						return issueUpdatedMsg{}
+					}
 				}
 			}
-			return a, cmd
-		}
-
-		// When edit dialog is active, route input to it
-		if a.editDialog.active {
-			var cmd tea.Cmd
-			a.editDialog, cmd = a.editDialog.Update(msg)
-			if a.editDialog.submitted {
-				summary, desc := a.editDialog.Values()
-				issueID := a.editDialog.issueID
-				service := a.service
-				a.loading = true
-				return a, func() tea.Msg {
-					err := service.UpdateIssue(issueID, map[string]any{
-						"summary":     summary,
-						"description": desc,
+			if a.issueDialog.projectChanged {
+				a.issueDialog.projectChanged = false
+				if len(a.issueDialog.projects) > 0 {
+					projectID := a.issueDialog.projects[a.issueDialog.projectIndex].ID
+					service := a.service
+					return a, tea.Batch(cmd, func() tea.Msg {
+						fields, err := service.ListProjectCustomFields(projectID)
+						if err != nil {
+							return errMsg{err}
+						}
+						return customFieldsLoadedMsg{fields}
 					})
-					if err != nil {
-						return errMsg{err}
-					}
-					return issueUpdatedMsg{}
 				}
 			}
 			return a, cmd
@@ -502,7 +558,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.commenting = false
 				a.commentInput.Blur()
 				return a, nil
-			case "ctrl+d":
+			case "ctrl+s":
 				text := a.commentInput.Value()
 				if text != "" && a.selected != nil {
 					issueID := a.selected.IDReadable
@@ -680,7 +736,20 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "e":
 			if a.selected != nil {
-				cmd := a.editDialog.Open(a.selected.IDReadable, a.selected.Summary, a.selected.Description)
+				issue := a.selected
+				comments := issue.Comments
+				cmd := a.issueDialog.OpenEdit(issue, comments)
+				if issue.Project != nil {
+					projectID := issue.Project.ID
+					service := a.service
+					return a, tea.Batch(cmd, func() tea.Msg {
+						fields, err := service.ListProjectCustomFields(projectID)
+						if err != nil {
+							return errMsg{err}
+						}
+						return customFieldsLoadedMsg{fields}
+					})
+				}
 				return a, cmd
 			}
 		case "d":
@@ -821,11 +890,8 @@ func (a *App) View() string {
 	if a.showHelp {
 		return renderHelp(a.width, a.height)
 	}
-	if a.createDialog.active {
-		return a.createDialog.View(a.width, a.height)
-	}
-	if a.editDialog.active {
-		return a.editDialog.View(a.width, a.height)
+	if a.issueDialog.active {
+		return a.issueDialog.View(a.width, a.height)
 	}
 
 	var panels string
@@ -842,7 +908,7 @@ func (a *App) View() string {
 		if a.commenting {
 			commentContent := lipgloss.NewStyle().Padding(1, 2).Render(
 				a.commentInput.View() + "\n\n" +
-					hintDescStyle.Render("ctrl+d: submit  esc: cancel"),
+					hintDescStyle.Render("ctrl+s: submit  esc: cancel"),
 			)
 			panels = renderTitledPanel(iconFile+" Add Comment", commentContent, innerWidth, panelHeight, true, lipgloss.Color("99"))
 		} else {
@@ -859,7 +925,7 @@ func (a *App) View() string {
 		if a.commenting {
 			commentContent := lipgloss.NewStyle().Padding(1, 2).Render(
 				a.commentInput.View() + "\n\n" +
-					hintDescStyle.Render("ctrl+d: submit  esc: cancel"),
+					hintDescStyle.Render("ctrl+s: submit  esc: cancel"),
 			)
 			rightPanel := renderTitledPanel(iconFile+" Add Comment", commentContent, innerDetailWidth, panelHeight, true, lipgloss.Color("99"))
 			panels = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)

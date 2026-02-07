@@ -114,7 +114,7 @@ type mockService struct{}
 func (m *mockService) GetCurrentUser() (*model.User, error)                          { return nil, nil }
 func (m *mockService) ListIssues(query string, skip, top int) ([]model.Issue, error) { return nil, nil }
 func (m *mockService) GetIssue(issueID string) (*model.Issue, error)                 { return nil, nil }
-func (m *mockService) CreateIssue(projectID, summary, description string) (*model.Issue, error) {
+func (m *mockService) CreateIssue(projectID, summary, description string, customFields []map[string]any) (*model.Issue, error) {
 	return nil, nil
 }
 func (m *mockService) UpdateIssue(issueID string, fields map[string]any) error { return nil }
@@ -122,3 +122,7 @@ func (m *mockService) DeleteIssue(issueID string) error                        {
 func (m *mockService) ListComments(issueID string) ([]model.Comment, error)    { return nil, nil }
 func (m *mockService) AddComment(issueID, text string) (*model.Comment, error) { return nil, nil }
 func (m *mockService) ListProjects() ([]model.Project, error)                  { return nil, nil }
+func (m *mockService) SearchUsers(query string) ([]model.User, error)          { return nil, nil }
+func (m *mockService) ListProjectCustomFields(projectID string) ([]model.ProjectCustomField, error) {
+	return nil, nil
+}
