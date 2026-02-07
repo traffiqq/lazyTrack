@@ -84,18 +84,43 @@ func (a *App) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, panels, bottom)
 }
 
+func (a *App) hasComments() bool {
+	return a.selected != nil && len(a.selected.Comments) > 0
+}
+
 func (a *App) resizePanels() {
 	panelHeight := a.height - 5
+	hasComments := a.hasComments()
 
 	if a.listCollapsed {
-		a.detail.Width = a.width - 4
-		a.detail.Height = panelHeight
+		if hasComments {
+			detailOuter := a.width / 2
+			commentsOuter := a.width - detailOuter
+			a.detail.Width = detailOuter - 4
+			a.detail.Height = panelHeight
+			a.comments.Width = commentsOuter - 4
+			a.comments.Height = panelHeight
+		} else {
+			a.detail.Width = a.width - 4
+			a.detail.Height = panelHeight
+		}
 	} else {
 		listOuter := int(float64(a.width) * a.listRatio)
 		listWidth := listOuter - 4
-		detailWidth := a.width - listOuter - 4
 		a.list.SetSize(listWidth, panelHeight)
-		a.detail.Width = detailWidth
-		a.detail.Height = panelHeight
+
+		if hasComments {
+			remaining := a.width - listOuter
+			detailOuter := remaining / 2
+			commentsOuter := remaining - detailOuter
+			a.detail.Width = detailOuter - 4
+			a.detail.Height = panelHeight
+			a.comments.Width = commentsOuter - 4
+			a.comments.Height = panelHeight
+		} else {
+			detailWidth := a.width - listOuter - 4
+			a.detail.Width = detailWidth
+			a.detail.Height = panelHeight
+		}
 	}
 }
