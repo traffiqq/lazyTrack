@@ -81,3 +81,13 @@ func (i *Issue) AssigneeValue() *User {
 	}
 	return nil
 }
+
+// TypeValue extracts the "Type" custom field value name, returns "" if not found.
+func (i *Issue) TypeValue() string {
+	for _, cf := range i.CustomFields {
+		if cf.Name == "Type" {
+			return customFieldValueName(cf.Value)
+		}
+	}
+	return ""
+}
