@@ -590,7 +590,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		case "ctrl+right", "L":
 			if !a.listCollapsed {
-				a.listRatio += 0.05
+				a.listRatio += 0.02
 				if a.listRatio > 0.8 {
 					a.listRatio = 0.8
 				}
@@ -599,7 +599,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		case "ctrl+left", "H":
 			if !a.listCollapsed {
-				a.listRatio -= 0.05
+				a.listRatio -= 0.02
 				if a.listRatio < 0.2 {
 					a.listRatio = 0.2
 				}
