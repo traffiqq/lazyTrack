@@ -55,11 +55,14 @@ func (c *Client) GetIssue(issueID string) (*model.Issue, error) {
 	return &issue, nil
 }
 
-func (c *Client) CreateIssue(projectID, summary, description string) (*model.Issue, error) {
+func (c *Client) CreateIssue(projectID, summary, description string, customFields []map[string]any) (*model.Issue, error) {
 	payload := map[string]any{
 		"project":     map[string]string{"id": projectID},
 		"summary":     summary,
 		"description": description,
+	}
+	if len(customFields) > 0 {
+		payload["customFields"] = customFields
 	}
 
 	body, err := json.Marshal(payload)
