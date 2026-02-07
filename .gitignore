@@ -1,0 +1,28 @@
+# Binaries
+/lazytrack
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (contains tokens)
+config.yaml
+
+# Claude Code
+.claude/
+CLAUDE.md
+docs/plans/
+
+# Worktrees
+.worktrees/
+
+# Go
+vendor/
