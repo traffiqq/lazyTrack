@@ -26,5 +26,16 @@ changelog:
       - "^docs:"
       - "^test:"
 
+brews:
+  - repository:
+      owner: traffiqq
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/traffiqq/lazyTrack"
+    description: "Terminal UI for managing YouTrack issues, inspired by lazygit"
+    license: "MIT"
+    install: |
+      bin.install "lazytrack"
+
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
