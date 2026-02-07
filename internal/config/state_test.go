@@ -85,3 +85,47 @@ func TestDefaultStatePath(t *testing.T) {
 		t.Fatal("expected non-empty default state path")
 	}
 }
+
+func TestSaveState_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.yaml")
+
+	state := State{
+		UI: UIState{
+			ListRatio:     0.6,
+			ListCollapsed: true,
+			SelectedIssue: "ABC-99",
+		},
+	}
+
+	if err := SaveStateToPath(path, state); err != nil {
+		t.Fatalf("save error: %v", err)
+	}
+
+	loaded := LoadStateFromPath(path)
+
+	if loaded.UI.ListRatio != 0.6 {
+		t.Errorf("got ListRatio %v, want 0.6", loaded.UI.ListRatio)
+	}
+	if !loaded.UI.ListCollapsed {
+		t.Error("got ListCollapsed false, want true")
+	}
+	if loaded.UI.SelectedIssue != "ABC-99" {
+		t.Errorf("got SelectedIssue %q, want %q", loaded.UI.SelectedIssue, "ABC-99")
+	}
+}
+
+func TestSaveState_CreatesDirectory(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "nested", "dir", "state.yaml")
+
+	state := DefaultState()
+	if err := SaveStateToPath(path, state); err != nil {
+		t.Fatalf("save error: %v", err)
+	}
+
+	loaded := LoadStateFromPath(path)
+	if loaded.UI.ListRatio != 0.4 {
+		t.Errorf("got ListRatio %v, want 0.4", loaded.UI.ListRatio)
+	}
+}

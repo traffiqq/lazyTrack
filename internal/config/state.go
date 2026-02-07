@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -55,4 +56,28 @@ func LoadStateFromPath(path string) State {
 // LoadState reads the state from the default XDG path.
 func LoadState() State {
 	return LoadStateFromPath(DefaultStatePath())
+}
+
+// SaveStateToPath writes the state to the given path, creating directories as needed.
+func SaveStateToPath(path string, state State) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("creating state directory: %w", err)
+	}
+
+	data, err := yaml.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("marshaling state: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("writing state: %w", err)
+	}
+
+	return nil
+}
+
+// SaveState writes the state to the default XDG path.
+func SaveState(state State) error {
+	return SaveStateToPath(DefaultStatePath(), state)
 }
