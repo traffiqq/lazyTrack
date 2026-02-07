@@ -226,6 +226,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.selected = msg.issue
 		a.detail.SetContent(renderIssueDetail(msg.issue))
 		a.detail.GotoTop()
+		if len(msg.issue.Comments) > 0 {
+			a.comments.SetContent(renderComments(msg.issue.Comments))
+			a.comments.GotoTop()
+		} else {
+			a.comments.SetContent("")
+			if a.focus == commentsPane {
+				a.focus = detailPane
+			}
+		}
+		a.resizePanels()
 		return a, nil
 
 	case projectsLoadedMsg:
@@ -293,6 +303,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.loading = false
 		a.selected = nil
 		a.detail.SetContent("Issue deleted.")
+		a.comments.SetContent("")
+		if a.focus == commentsPane {
+			a.focus = detailPane
+		}
+		a.resizePanels()
 		return a, a.fetchIssuesCmd()
 
 	case commentAddedMsg:
