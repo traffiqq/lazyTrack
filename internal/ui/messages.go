@@ -20,6 +20,10 @@ type projectsLoadedMsg struct {
 	projects []model.Project
 }
 
+type projectsForPickerMsg struct {
+	projects []model.Project
+}
+
 type issueCreatedMsg struct{}
 
 type issueUpdatedMsg struct{}
