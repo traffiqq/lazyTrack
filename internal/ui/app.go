@@ -19,6 +19,7 @@ type pane int
 const (
 	listPane pane = iota
 	detailPane
+	commentsPane
 )
 
 // issueItem wraps model.Issue for the list.Model interface.
@@ -57,6 +58,7 @@ type App struct {
 	focus       pane
 	list        list.Model
 	detail      viewport.Model
+	comments    viewport.Model
 	issues      []model.Issue
 	selected    *model.Issue
 	query       string
@@ -102,6 +104,8 @@ func NewApp(service IssueService, state config.State) *App {
 	vp := viewport.New(0, 0)
 	vp.SetContent("Loading issues...")
 
+	cvp := viewport.New(0, 0)
+
 	si := textinput.New()
 	si.Placeholder = "YouTrack query (e.g., project: PROJ #Unresolved)"
 	si.Prompt = "/ "
@@ -135,6 +139,7 @@ func NewApp(service IssueService, state config.State) *App {
 		service:      service,
 		list:         l,
 		detail:       vp,
+		comments:     cvp,
 		pageSize:     50,
 		listRatio:      state.UI.ListRatio,
 		listCollapsed:  state.UI.ListCollapsed,

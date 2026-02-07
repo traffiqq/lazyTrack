@@ -22,9 +22,10 @@ var (
 
 // Nerd Font icon constants.
 const (
-	iconList = "\uF0CA" // nf-fa-list_ul
-	iconFile = "\uF15C" // nf-fa-file_text_o
-	iconApp  = "\uF188" // nf-fa-bug
+	iconList    = "\uF0CA" // nf-fa-list_ul
+	iconFile    = "\uF15C" // nf-fa-file_text_o
+	iconApp     = "\uF188" // nf-fa-bug
+	iconComment = "💬"
 )
 
 // Chrome styles for the status bar key hints.
