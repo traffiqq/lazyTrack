@@ -19,6 +19,7 @@ type pane int
 const (
 	listPane pane = iota
 	detailPane
+	commentsPane
 )
 
 // issueItem wraps model.Issue for the list.Model interface.
@@ -57,6 +58,7 @@ type App struct {
 	focus       pane
 	list        list.Model
 	detail      viewport.Model
+	comments    viewport.Model
 	issues      []model.Issue
 	selected    *model.Issue
 	query       string
@@ -107,6 +109,8 @@ func NewApp(service IssueService, state config.State) *App {
 	vp := viewport.New(0, 0)
 	vp.SetContent("Loading issues...")
 
+	cvp := viewport.New(0, 0)
+
 	si := textinput.New()
 	si.Placeholder = "YouTrack query (e.g., project: PROJ #Unresolved)"
 	si.Prompt = "/ "
@@ -140,6 +144,7 @@ func NewApp(service IssueService, state config.State) *App {
 		service:      service,
 		list:         l,
 		detail:       vp,
+		comments:     cvp,
 		pageSize:     50,
 		listRatio:      state.UI.ListRatio,
 		listCollapsed:  state.UI.ListCollapsed,
@@ -228,6 +233,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.selected = msg.issue
 		a.detail.SetContent(renderIssueDetail(msg.issue))
 		a.detail.GotoTop()
+		if len(msg.issue.Comments) > 0 {
+			a.comments.SetContent(renderComments(msg.issue.Comments))
+			a.comments.GotoTop()
+		} else {
+			a.comments.SetContent("")
+			if a.focus == commentsPane {
+				a.focus = detailPane
+			}
+		}
+		a.resizePanels()
 		return a, nil
 
 	case projectsLoadedMsg:
@@ -295,6 +310,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.loading = false
 		a.selected = nil
 		a.detail.SetContent("Issue deleted.")
+		a.comments.SetContent("")
+		if a.focus == commentsPane {
+			a.focus = detailPane
+		}
+		a.resizePanels()
 		return a, a.fetchIssuesCmd()
 
 	case commentAddedMsg:
@@ -401,6 +421,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case detailPane:
 		a.detail, cmd = a.detail.Update(msg)
+		cmds = append(cmds, cmd)
+
+	case commentsPane:
+		a.comments, cmd = a.comments.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 

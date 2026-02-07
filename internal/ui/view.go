@@ -30,6 +30,7 @@ func (a *App) View() string {
 
 	var panels string
 	panelHeight := a.height - 3
+	hasComments := a.hasComments()
 
 	// Determine detail panel title
 	detailTitle := iconFile + " Detail"
@@ -37,33 +38,61 @@ func (a *App) View() string {
 		detailTitle = iconFile + " " + a.selected.IDReadable
 	}
 
+	// Comments panel title with count
+	commentsTitle := ""
+	if hasComments {
+		commentsTitle = fmt.Sprintf("%s Comments (%d)", iconComment, len(a.selected.Comments))
+	}
+
 	if a.listCollapsed {
-		innerWidth := a.width - 2
 		if a.commenting {
+			innerWidth := a.width - 2
 			commentContent := lipgloss.NewStyle().Padding(1, 2).Render(
 				a.commentInput.View() + "\n\n" +
 					hintDescStyle.Render("ctrl+s: submit  esc: cancel"),
 			)
 			panels = renderTitledPanel(iconFile+" Add Comment", commentContent, innerWidth, panelHeight, true, lipgloss.Color("99"))
+		} else if hasComments {
+			detailOuter := a.width / 2
+			commentsOuter := a.width - detailOuter
+			innerDetailWidth := detailOuter - 2
+			innerCommentsWidth := commentsOuter - 2
+
+			detailPanel := renderTitledPanel(detailTitle, a.detail.View(), innerDetailWidth, panelHeight, a.focus == detailPane, lipgloss.Color("69"))
+			commentsPanel := renderTitledPanel(commentsTitle, a.comments.View(), innerCommentsWidth, panelHeight, a.focus == commentsPane, lipgloss.Color("99"))
+			panels = lipgloss.JoinHorizontal(lipgloss.Top, detailPanel, commentsPanel)
 		} else {
+			innerWidth := a.width - 2
 			panels = renderTitledPanel(detailTitle, a.detail.View(), innerWidth, panelHeight, true, lipgloss.Color("69"))
 		}
 	} else {
 		listWidth := int(float64(a.width) * a.listRatio)
-		detailWidth := a.width - listWidth
 		innerListWidth := listWidth - 2
-		innerDetailWidth := detailWidth - 2
 
 		leftPanel := renderTitledPanel(iconList+" Issues", a.list.View(), innerListWidth, panelHeight, a.focus == listPane, lipgloss.Color("78"))
 
 		if a.commenting {
+			detailWidth := a.width - listWidth
+			innerDetailWidth := detailWidth - 2
 			commentContent := lipgloss.NewStyle().Padding(1, 2).Render(
 				a.commentInput.View() + "\n\n" +
 					hintDescStyle.Render("ctrl+s: submit  esc: cancel"),
 			)
 			rightPanel := renderTitledPanel(iconFile+" Add Comment", commentContent, innerDetailWidth, panelHeight, true, lipgloss.Color("99"))
 			panels = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
+		} else if hasComments {
+			remaining := a.width - listWidth
+			detailOuter := remaining / 2
+			commentsOuter := remaining - detailOuter
+			innerDetailWidth := detailOuter - 2
+			innerCommentsWidth := commentsOuter - 2
+
+			detailPanel := renderTitledPanel(detailTitle, a.detail.View(), innerDetailWidth, panelHeight, a.focus == detailPane, lipgloss.Color("69"))
+			commentsPanel := renderTitledPanel(commentsTitle, a.comments.View(), innerCommentsWidth, panelHeight, a.focus == commentsPane, lipgloss.Color("99"))
+			panels = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, detailPanel, commentsPanel)
 		} else {
+			detailWidth := a.width - listWidth
+			innerDetailWidth := detailWidth - 2
 			rightPanel := renderTitledPanel(detailTitle, a.detail.View(), innerDetailWidth, panelHeight, a.focus == detailPane, lipgloss.Color("69"))
 			panels = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 		}
@@ -87,18 +116,43 @@ func (a *App) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, panels, bottom)
 }
 
+func (a *App) hasComments() bool {
+	return a.selected != nil && len(a.selected.Comments) > 0
+}
+
 func (a *App) resizePanels() {
 	panelHeight := a.height - 5
+	hasComments := a.hasComments()
 
 	if a.listCollapsed {
-		a.detail.Width = a.width - 4
-		a.detail.Height = panelHeight
+		if hasComments {
+			detailOuter := a.width / 2
+			commentsOuter := a.width - detailOuter
+			a.detail.Width = detailOuter - 4
+			a.detail.Height = panelHeight
+			a.comments.Width = commentsOuter - 4
+			a.comments.Height = panelHeight
+		} else {
+			a.detail.Width = a.width - 4
+			a.detail.Height = panelHeight
+		}
 	} else {
 		listOuter := int(float64(a.width) * a.listRatio)
 		listWidth := listOuter - 4
-		detailWidth := a.width - listOuter - 4
 		a.list.SetSize(listWidth, panelHeight)
-		a.detail.Width = detailWidth
-		a.detail.Height = panelHeight
+
+		if hasComments {
+			remaining := a.width - listOuter
+			detailOuter := remaining / 2
+			commentsOuter := remaining - detailOuter
+			a.detail.Width = detailOuter - 4
+			a.detail.Height = panelHeight
+			a.comments.Width = commentsOuter - 4
+			a.comments.Height = panelHeight
+		} else {
+			detailWidth := a.width - listOuter - 4
+			a.detail.Width = detailWidth
+			a.detail.Height = panelHeight
+		}
 	}
 }

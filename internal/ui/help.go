@@ -7,7 +7,7 @@ func renderHelp(width, height int) string {
 
 Navigation:
   j/k, up/down   Navigate issues
-  tab             Switch panels
+  tab             Cycle panels
   enter           Load issue detail
 
 Actions:

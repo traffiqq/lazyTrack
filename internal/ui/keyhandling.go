@@ -331,9 +331,17 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		_ = config.SaveStateToPath(a.statePath, state)
 		return a, tea.Quit
 	case "tab":
-		if a.focus == listPane {
+		hasComments := a.selected != nil && len(a.selected.Comments) > 0
+		switch a.focus {
+		case listPane:
 			a.focus = detailPane
-		} else {
+		case detailPane:
+			if hasComments {
+				a.focus = commentsPane
+			} else {
+				a.focus = listPane
+			}
+		case commentsPane:
 			a.focus = listPane
 		}
 		return a, nil
