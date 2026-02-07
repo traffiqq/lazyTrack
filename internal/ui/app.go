@@ -32,11 +32,21 @@ func (i issueItem) Title() string {
 }
 
 func (i issueItem) Description() string {
-	state := i.issue.StateValue()
-	if state == "" {
-		return ""
+	var parts []string
+	if t := i.issue.TypeValue(); t != "" {
+		parts = append(parts, t)
 	}
-	return stateColor(state)
+	if s := i.issue.StateValue(); s != "" {
+		parts = append(parts, stateColor(s))
+	}
+	if a := i.issue.AssigneeValue(); a != nil {
+		name := a.FullName
+		if name == "" {
+			name = a.Login
+		}
+		parts = append(parts, name)
+	}
+	return strings.Join(parts, " · ")
 }
 
 func (i issueItem) FilterValue() string {

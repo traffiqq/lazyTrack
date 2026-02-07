@@ -46,6 +46,47 @@ func TestIssue_StateValue(t *testing.T) {
 	}
 }
 
+func TestIssue_TypeValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		expected string
+	}{
+		{
+			name:     "type present",
+			json:     `{"customFields":[{"name":"Type","$type":"SingleEnumIssueCustomField","value":{"name":"Bug","$type":"EnumBundleElement"}}]}`,
+			expected: "Bug",
+		},
+		{
+			name:     "no type field",
+			json:     `{"customFields":[{"name":"State","$type":"StateIssueCustomField","value":{"name":"Open"}}]}`,
+			expected: "",
+		},
+		{
+			name:     "no custom fields",
+			json:     `{}`,
+			expected: "",
+		},
+		{
+			name:     "null value",
+			json:     `{"customFields":[{"name":"Type","$type":"SingleEnumIssueCustomField","value":null}]}`,
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var issue Issue
+			if err := json.Unmarshal([]byte(tt.json), &issue); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if got := issue.TypeValue(); got != tt.expected {
+				t.Errorf("TypeValue() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestIssue_AssigneeValue(t *testing.T) {
 	tests := []struct {
 		name      string

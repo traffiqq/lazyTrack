@@ -62,6 +62,16 @@ func customFieldValueUser(raw json.RawMessage) *User {
 	return u
 }
 
+// TypeValue extracts the "Type" custom field value name, returns "" if not found.
+func (i *Issue) TypeValue() string {
+	for _, cf := range i.CustomFields {
+		if cf.Name == "Type" {
+			return customFieldValueName(cf.Value)
+		}
+	}
+	return ""
+}
+
 // StateValue extracts the "State" custom field value name, returns "" if not found.
 func (i *Issue) StateValue() string {
 	for _, cf := range i.CustomFields {
