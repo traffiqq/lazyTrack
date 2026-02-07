@@ -57,3 +57,11 @@ type assigneeSearchResultsMsg struct {
 type customFieldsLoadedMsg struct {
 	fields []model.ProjectCustomField
 }
+
+type currentUserLoadedMsg struct {
+	user *model.User
+}
+
+type mentionsLoadedMsg struct {
+	issues []model.Issue
+}

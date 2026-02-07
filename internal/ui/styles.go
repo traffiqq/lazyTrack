@@ -34,6 +34,10 @@ var (
 
 	hintDescStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("245")) // gray
+
+	mentionBadgeStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("220")).
+		Bold(true)
 )
 
 // keyHint pairs a key with its description for the status bar.

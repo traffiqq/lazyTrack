@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/cf/lazytrack/internal/model"
 )
 
 // effectiveQuery returns the search query with project filter prepended if applicable.
@@ -70,4 +72,44 @@ func (a *App) fetchDetailCmd(issueID string) tea.Cmd {
 		}
 		return issueDetailLoadedMsg{issue}
 	}
+}
+
+// fetchCurrentUserCmd creates a command that fetches the current user.
+func (a *App) fetchCurrentUserCmd() tea.Cmd {
+	service := a.service
+	return func() tea.Msg {
+		user, err := service.GetCurrentUser()
+		if err != nil {
+			return errMsg{err}
+		}
+		return currentUserLoadedMsg{user}
+	}
+}
+
+// fetchMentionsCmd creates a command that fetches issues mentioning the current user.
+func (a *App) fetchMentionsCmd() tea.Cmd {
+	query := "mentioned: me sort by: updated desc"
+	if a.activeProject != nil {
+		query = "project: " + a.activeProject.ShortName + " " + query
+	}
+	service := a.service
+	return func() tea.Msg {
+		issues, err := service.ListIssues(query, 0, 50)
+		if err != nil {
+			return errMsg{err}
+		}
+		return mentionsLoadedMsg{issues}
+	}
+}
+
+// latestIssueTimestamp returns the maximum Updated timestamp from a slice of issues.
+// Returns 0 if the slice is empty.
+func latestIssueTimestamp(issues []model.Issue) int64 {
+	var max int64
+	for _, issue := range issues {
+		if issue.Updated > max {
+			max = issue.Updated
+		}
+	}
+	return max
 }

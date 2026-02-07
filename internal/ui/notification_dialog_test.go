@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/cf/lazytrack/internal/config"
 	"github.com/cf/lazytrack/internal/model"
 )
 
@@ -269,4 +270,72 @@ func TestNotificationDialog_ViewError(t *testing.T) {
 	if !strings.Contains(result, "connection failed") {
 		t.Error("expected error message in view")
 	}
+}
+
+func TestLatestIssueTimestamp_Empty(t *testing.T) {
+	got := latestIssueTimestamp(nil)
+	if got != 0 {
+		t.Errorf("got %d, want 0 for empty slice", got)
+	}
+}
+
+func TestLatestIssueTimestamp_Multiple(t *testing.T) {
+	issues := []model.Issue{
+		{Updated: 1000},
+		{Updated: 3000},
+		{Updated: 2000},
+	}
+	got := latestIssueTimestamp(issues)
+	if got != 3000 {
+		t.Errorf("got %d, want 3000", got)
+	}
+}
+
+func TestFetchMentionsCmd_NoProject(t *testing.T) {
+	svc := &mentionRecordingService{}
+	app := NewApp(svc, config.DefaultState())
+
+	cmd := app.fetchMentionsCmd()
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd")
+	}
+	msg := cmd()
+	if _, ok := msg.(mentionsLoadedMsg); !ok {
+		t.Errorf("expected mentionsLoadedMsg, got %T", msg)
+	}
+	if svc.lastQuery == "" {
+		t.Fatal("expected ListIssues to be called")
+	}
+	if !strings.Contains(svc.lastQuery, "mentioned: me") {
+		t.Errorf("query %q should contain 'mentioned: me'", svc.lastQuery)
+	}
+}
+
+func TestFetchMentionsCmd_WithProject(t *testing.T) {
+	svc := &mentionRecordingService{}
+	app := NewApp(svc, config.DefaultState())
+	app.activeProject = &model.Project{ShortName: "PROJ"}
+
+	cmd := app.fetchMentionsCmd()
+	msg := cmd()
+	if _, ok := msg.(mentionsLoadedMsg); !ok {
+		t.Errorf("expected mentionsLoadedMsg, got %T", msg)
+	}
+	if !strings.Contains(svc.lastQuery, "project: PROJ") {
+		t.Errorf("query %q should contain 'project: PROJ'", svc.lastQuery)
+	}
+	if !strings.Contains(svc.lastQuery, "mentioned: me") {
+		t.Errorf("query %q should contain 'mentioned: me'", svc.lastQuery)
+	}
+}
+
+// mentionRecordingService records ListIssues calls for mention query tests.
+type mentionRecordingService struct {
+	mockService
+	lastQuery string
+}
+
+func (m *mentionRecordingService) ListIssues(query string, skip, top int) ([]model.Issue, error) {
+	m.lastQuery = query
+	return []model.Issue{}, nil
 }
