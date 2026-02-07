@@ -45,18 +45,29 @@ func renderIssueDetail(issue *model.Issue) string {
 		b.WriteString("(no description)\n")
 	}
 
-	if len(issue.Comments) > 0 {
-		b.WriteString("\n────────── Comments ──────────\n\n")
-		for _, c := range issue.Comments {
-			author := "Unknown"
-			if c.Author != nil {
+	return b.String()
+}
+
+func renderComments(comments []model.Comment) string {
+	var b strings.Builder
+
+	for i := len(comments) - 1; i >= 0; i-- {
+		c := comments[i]
+		author := "Unknown"
+		if c.Author != nil {
+			if c.Author.FullName != "" {
 				author = c.Author.FullName
+			} else if c.Author.Login != "" {
+				author = c.Author.Login
 			}
-			ts := ""
-			if c.Created > 0 {
-				ts = " (" + formatTimestamp(c.Created) + ")"
-			}
-			fmt.Fprintf(&b, "%s%s:\n%s\n\n", author, ts, c.Text)
+		}
+		ts := ""
+		if c.Created > 0 {
+			ts = " (" + formatTimestamp(c.Created) + ")"
+		}
+		fmt.Fprintf(&b, "%s %s%s\n%s\n", iconComment, author, ts, c.Text)
+		if i > 0 {
+			b.WriteString("\n")
 		}
 	}
 
