@@ -49,12 +49,10 @@ type IssueDialog struct {
 	projectChanged bool
 
 	// Type and State dropdowns
-	typeValues    []model.BundleValue
-	typeCursor    int
-	typeFieldType string // e.g. "SingleEnumIssueCustomField"
-	stateValues   []model.BundleValue
-	stateCursor   int
-	stateFieldType string // e.g. "StateIssueCustomField"
+	typeValues  []model.BundleValue
+	typeCursor  int
+	stateValues []model.BundleValue
+	stateCursor int
 
 	// Assignee autocomplete
 	assigneeInput    textinput.Model
@@ -188,7 +186,6 @@ func (d *IssueDialog) SetCustomFields(fields []model.ProjectCustomField, current
 		switch f.Field.Name {
 		case "State":
 			d.stateValues = f.Bundle.Values
-			d.stateFieldType = f.Field.Type
 			d.stateCursor = 0
 			if currentState != "" {
 				for i, v := range f.Bundle.Values {
@@ -200,7 +197,6 @@ func (d *IssueDialog) SetCustomFields(fields []model.ProjectCustomField, current
 			}
 		case "Type":
 			d.typeValues = f.Bundle.Values
-			d.typeFieldType = f.Field.Type
 			d.typeCursor = 0
 			if currentType != "" {
 				for i, v := range f.Bundle.Values {
@@ -307,10 +303,10 @@ func (d *IssueDialog) buildCustomFields() []map[string]any {
 		sv := d.stateValues[d.stateCursor]
 		fields = append(fields, map[string]any{
 			"name":  "State",
-			"$type": d.stateFieldType,
+			"$type": "StateIssueCustomField",
 			"value": map[string]string{
 				"name":  sv.Name,
-				"$type": sv.Type,
+				"$type": "StateBundleElement",
 			},
 		})
 	}
@@ -319,10 +315,10 @@ func (d *IssueDialog) buildCustomFields() []map[string]any {
 		tv := d.typeValues[d.typeCursor]
 		fields = append(fields, map[string]any{
 			"name":  "Type",
-			"$type": d.typeFieldType,
+			"$type": "SingleEnumIssueCustomField",
 			"value": map[string]string{
 				"name":  tv.Name,
-				"$type": tv.Type,
+				"$type": "EnumBundleElement",
 			},
 		})
 	}
