@@ -86,8 +86,13 @@ type App struct {
 	goingToIssue   bool
 	gotoInput      textinput.Model
 	gotoProject    string
-	restoreIssueID string
-	statePath      string
+	restoreIssueID     string
+	statePath          string
+	notifDialog        NotificationDialog
+	currentUser        *model.User
+	lastCheckedMentions int64
+	mentionedIssues    []model.Issue
+	unreadMentionCount int
 }
 
 func NewApp(service IssueService, state config.State) *App {
@@ -145,9 +150,11 @@ func NewApp(service IssueService, state config.State) *App {
 		commentInput: ci,
 		stateInput:   sti,
 		assignInput:  asi,
-		finderDialog:  NewFinderDialog(),
-		projectPicker: NewProjectPickerDialog(),
-		gotoInput:     gti,
+		finderDialog:        NewFinderDialog(),
+		projectPicker:       NewProjectPickerDialog(),
+		notifDialog:         NewNotificationDialog(),
+		lastCheckedMentions: state.UI.LastCheckedMentions,
+		gotoInput:           gti,
 	}
 
 	// Restore active project from state
@@ -159,7 +166,7 @@ func NewApp(service IssueService, state config.State) *App {
 }
 
 func (a *App) Init() tea.Cmd {
-	return a.fetchIssuesCmd()
+	return tea.Batch(a.fetchIssuesCmd(), a.fetchCurrentUserCmd())
 }
 
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -300,6 +307,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case errMsg:
 		a.loading = false
+		if a.notifDialog.active {
+			a.notifDialog.SetError(msg.err.Error())
+			return a, nil
+		}
 		if a.finderDialog.active {
 			a.finderDialog.SetError(msg.err.Error())
 			return a, nil
@@ -335,6 +346,23 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		a.projectPicker.Open(msg.projects)
+		return a, nil
+
+	case currentUserLoadedMsg:
+		a.currentUser = msg.user
+		return a, a.fetchMentionsCmd()
+
+	case mentionsLoadedMsg:
+		a.mentionedIssues = msg.issues
+		a.unreadMentionCount = 0
+		for _, issue := range msg.issues {
+			if issue.Updated > a.lastCheckedMentions {
+				a.unreadMentionCount++
+			}
+		}
+		if a.notifDialog.active && a.notifDialog.loading {
+			a.notifDialog.SetResults(msg.issues)
+		}
 		return a, nil
 
 	case tea.KeyMsg:

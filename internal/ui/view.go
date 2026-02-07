@@ -12,6 +12,9 @@ func (a *App) View() string {
 	}
 
 	// Render overlays if active
+	if a.notifDialog.active {
+		return a.notifDialog.View(a.width, a.height)
+	}
 	if a.finderDialog.active {
 		return a.finderDialog.View(a.width, a.height)
 	}

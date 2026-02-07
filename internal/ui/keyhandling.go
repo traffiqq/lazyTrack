@@ -69,6 +69,23 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, cmd
 	}
 
+	// When notification dialog is active, route input to it
+	if a.notifDialog.active {
+		var cmd tea.Cmd
+		a.notifDialog, cmd = a.notifDialog.Update(msg)
+		if a.notifDialog.submitted && a.notifDialog.selectedIssue != nil {
+			issueID := a.notifDialog.selectedIssue.IDReadable
+			a.lastCheckedMentions = latestIssueTimestamp(a.mentionedIssues)
+			a.unreadMentionCount = 0
+			a.listCollapsed = true
+			a.focus = detailPane
+			a.resizePanels()
+			a.loading = true
+			return a, a.fetchDetailCmd(issueID)
+		}
+		return a, cmd
+	}
+
 	// When finder is active, route input to it
 	if a.finderDialog.active {
 		var cmd tea.Cmd
@@ -300,8 +317,9 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c", "q":
 		state := config.State{
 			UI: config.UIState{
-				ListRatio:     a.listRatio,
-				ListCollapsed: a.listCollapsed,
+				ListRatio:           a.listRatio,
+				ListCollapsed:       a.listCollapsed,
+				LastCheckedMentions: a.lastCheckedMentions,
 			},
 		}
 		if a.selected != nil {
@@ -435,6 +453,24 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "f":
 		return a, a.finderDialog.Open()
+	case "n":
+		if a.currentUser == nil {
+			a.err = "Could not load user — mentions unavailable"
+			return a, nil
+		}
+		a.notifDialog.Open(a.lastCheckedMentions)
+		service := a.service
+		query := "mentioned: me sort by: updated desc"
+		if a.activeProject != nil {
+			query = "project: " + a.activeProject.ShortName + " " + query
+		}
+		return a, func() tea.Msg {
+			issues, err := service.ListIssues(query, 0, 50)
+			if err != nil {
+				return errMsg{err}
+			}
+			return mentionsLoadedMsg{issues}
+		}
 	case "r":
 		a.loading = true
 		var refreshCmds []tea.Cmd
@@ -442,6 +478,9 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if a.selected != nil {
 			issueID := a.selected.IDReadable
 			refreshCmds = append(refreshCmds, a.fetchDetailCmd(issueID))
+		}
+		if a.currentUser != nil {
+			refreshCmds = append(refreshCmds, a.fetchMentionsCmd())
 		}
 		return a, tea.Batch(refreshCmds...)
 	}

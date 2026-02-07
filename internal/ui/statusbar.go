@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -22,6 +23,9 @@ func (a *App) renderStatusBar() string {
 	}
 	if a.query != "" {
 		left += hintDescStyle.Render(" | query: " + a.query)
+	}
+	if a.unreadMentionCount > 0 {
+		left += mentionBadgeStyle.Render(fmt.Sprintf(" · %d mentions", a.unreadMentionCount))
 	}
 	if a.loading {
 		left += keyStyle.Render(" | loading...")

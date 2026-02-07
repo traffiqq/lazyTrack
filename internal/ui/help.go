@@ -21,6 +21,7 @@ Actions:
   a           Assign issue
   p           Select project
   #           Go to issue by number
+  n           Mentions
   r           Refresh
 
 Dialogs & Comments:
