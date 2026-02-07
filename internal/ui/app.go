@@ -545,6 +545,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if a.focus == listPane {
 				if item, ok := a.list.SelectedItem().(issueItem); ok {
+					a.focus = detailPane
 					a.loading = true
 					return a, a.fetchDetailCmd(item.issue.IDReadable)
 				}
