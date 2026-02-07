@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -200,5 +201,72 @@ func TestNotificationDialog_InactiveUpdate(t *testing.T) {
 	}
 	if cmd != nil {
 		t.Error("expected nil cmd when inactive")
+	}
+}
+
+func TestNotificationDialog_ViewInactive(t *testing.T) {
+	d := NewNotificationDialog()
+	result := d.View(80, 24)
+	if result != "" {
+		t.Errorf("expected empty view when inactive, got %q", result)
+	}
+}
+
+func TestNotificationDialog_ViewLoading(t *testing.T) {
+	d := NewNotificationDialog()
+	d.Open(0)
+
+	result := d.View(80, 24)
+
+	if !strings.Contains(result, "Mentions") {
+		t.Error("expected title 'Mentions' in view")
+	}
+	if !strings.Contains(result, "Loading") {
+		t.Error("expected loading indicator in view")
+	}
+}
+
+func TestNotificationDialog_ViewWithResults(t *testing.T) {
+	d := NewNotificationDialog()
+	d.Open(1000)
+	d.SetResults([]model.Issue{
+		{IDReadable: "PROJ-1", Summary: "Old issue", Updated: 500},
+		{IDReadable: "PROJ-2", Summary: "New issue", Updated: 2000},
+	})
+
+	result := d.View(100, 30)
+
+	if !strings.Contains(result, "PROJ-1") {
+		t.Error("expected PROJ-1 in view")
+	}
+	if !strings.Contains(result, "PROJ-2") {
+		t.Error("expected PROJ-2 in view")
+	}
+	if !strings.Contains(result, "NEW") {
+		t.Error("expected NEW badge for issue with Updated > lastChecked")
+	}
+}
+
+func TestNotificationDialog_ViewEmpty(t *testing.T) {
+	d := NewNotificationDialog()
+	d.Open(0)
+	d.SetResults([]model.Issue{})
+
+	result := d.View(80, 24)
+
+	if !strings.Contains(result, "No mentions found") {
+		t.Error("expected empty state message")
+	}
+}
+
+func TestNotificationDialog_ViewError(t *testing.T) {
+	d := NewNotificationDialog()
+	d.Open(0)
+	d.SetError("connection failed")
+
+	result := d.View(80, 24)
+
+	if !strings.Contains(result, "connection failed") {
+		t.Error("expected error message in view")
 	}
 }
