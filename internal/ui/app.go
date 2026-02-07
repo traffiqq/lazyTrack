@@ -394,6 +394,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case detailPane:
 		a.detail, cmd = a.detail.Update(msg)
 		cmds = append(cmds, cmd)
+
+	case commentsPane:
+		a.comments, cmd = a.comments.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
 	return a, tea.Batch(cmds...)
