@@ -72,7 +72,7 @@ var (
 		{"q", "quit"},
 	}
 	commentingHints = []keyHint{
-		{"ctrl+d", "submit"},
+		{"ctrl+s", "submit"},
 		{"esc", "cancel"},
 	}
 )

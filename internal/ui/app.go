@@ -548,7 +548,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.commenting = false
 				a.commentInput.Blur()
 				return a, nil
-			case "ctrl+d":
+			case "ctrl+s":
 				text := a.commentInput.Value()
 				if text != "" && a.selected != nil {
 					issueID := a.selected.IDReadable
@@ -889,7 +889,7 @@ func (a *App) View() string {
 		if a.commenting {
 			commentContent := lipgloss.NewStyle().Padding(1, 2).Render(
 				a.commentInput.View() + "\n\n" +
-					hintDescStyle.Render("ctrl+d: submit  esc: cancel"),
+					hintDescStyle.Render("ctrl+s: submit  esc: cancel"),
 			)
 			panels = renderTitledPanel(iconFile+" Add Comment", commentContent, innerWidth, panelHeight, true, lipgloss.Color("99"))
 		} else {
@@ -906,7 +906,7 @@ func (a *App) View() string {
 		if a.commenting {
 			commentContent := lipgloss.NewStyle().Padding(1, 2).Render(
 				a.commentInput.View() + "\n\n" +
-					hintDescStyle.Render("ctrl+d: submit  esc: cancel"),
+					hintDescStyle.Render("ctrl+s: submit  esc: cancel"),
 			)
 			rightPanel := renderTitledPanel(iconFile+" Add Comment", commentContent, innerDetailWidth, panelHeight, true, lipgloss.Color("99"))
 			panels = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
