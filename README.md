@@ -39,6 +39,10 @@ make build
 3. The main view has two panels: **issue list** (left) and **issue detail** (right)
 4. Press `?` to see all keybindings
 
+## Requirements
+
+- A terminal with a [Nerd Font](https://www.nerdfonts.com/) installed for panel title icons. Without a Nerd Font, icons render as placeholder characters but the app remains fully functional.
+
 ## Configuration
 
 Config is stored at `~/.config/lazytrack/config.yaml` (XDG-compliant, created automatically by the setup wizard):
