@@ -16,7 +16,7 @@ var (
 		BorderForeground(lipgloss.Color("69"))
 
 	statusBarStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
+		Background(lipgloss.Color("236")).
 		Padding(0, 1)
 
 	titleStyle = lipgloss.NewStyle().
