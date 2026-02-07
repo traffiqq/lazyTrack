@@ -69,7 +69,7 @@ var (
 		{"p", "project"},
 		{"#", "goto"},
 		{"r", "refresh"},
-		{"tab", "switch"},
+		{"tab", "cycle"},
 		{"ctrl+e", "collapse"},
 		{"H/L", "resize"},
 		{"q", "quit"},
