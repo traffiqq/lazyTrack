@@ -363,7 +363,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				service := a.service
 				a.loading = true
 				return a, func() tea.Msg {
-					_, err := service.CreateIssue(projectID, summary, desc)
+					_, err := service.CreateIssue(projectID, summary, desc, nil)
 					if err != nil {
 						return errMsg{err}
 					}
