@@ -1,12 +1,15 @@
 package ui
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/cf/lazytrack/internal/model"
 )
@@ -518,4 +521,216 @@ func (d *IssueDialog) Update(msg tea.Msg) (IssueDialog, tea.Cmd) {
 	}
 
 	return *d, nil
+}
+
+func (d *IssueDialog) View(width, height int) string {
+	if !d.active {
+		return ""
+	}
+
+	outerWidth := width
+	outerHeight := height
+	hasComments := len(d.comments) > 0
+
+	// Calculate pane widths
+	formWidth := outerWidth - 4 // padding + border
+	commentsWidth := 0
+	if hasComments {
+		formWidth = int(float64(outerWidth)*0.6) - 4
+		commentsWidth = outerWidth - int(float64(outerWidth)*0.6) - 4
+	}
+
+	formContent := d.renderForm(formWidth, outerHeight-4)
+
+	if !hasComments {
+		style := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("99")).
+			Padding(1, 1).
+			Width(outerWidth - 2).
+			Height(outerHeight - 2)
+		return style.Render(formContent)
+	}
+
+	// Two panes: form left, comments right
+	formHeight := outerHeight - 2
+	leftPanel := renderTitledPanel(d.formTitle(), formContent, formWidth, formHeight-2, d.focusIndex != fieldComments, lipgloss.Color("99"))
+	rightContent := d.renderComments(commentsWidth, formHeight-4)
+	rightPanel := renderTitledPanel(iconFile+" Comments", rightContent, commentsWidth, formHeight-2, d.focusIndex == fieldComments, lipgloss.Color("69"))
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
+}
+
+func (d *IssueDialog) formTitle() string {
+	if d.mode == modeCreate {
+		return iconFile + " Create Issue"
+	}
+	return iconFile + " Edit " + d.issueID
+}
+
+func (d *IssueDialog) renderForm(width, height int) string {
+	var b strings.Builder
+	labelFocused := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("69"))
+	labelNormal := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	selectedStyle := lipgloss.NewStyle().Background(lipgloss.Color("237")).Foreground(lipgloss.Color("255"))
+	cursorStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("69"))
+
+	label := func(name string, field issueField) string {
+		if d.focusIndex == field {
+			return labelFocused.Render(name + ":")
+		}
+		return labelNormal.Render(name + ":")
+	}
+
+	// Project selector (create only)
+	if d.mode == modeCreate {
+		b.WriteString(label("Project", fieldProject) + " ")
+		if len(d.projects) > 0 {
+			p := d.projects[d.projectIndex]
+			if d.focusIndex == fieldProject {
+				b.WriteString(cursorStyle.Render(fmt.Sprintf("< %s (%s) >", p.Name, p.ShortName)))
+			} else {
+				b.WriteString(fmt.Sprintf("%s (%s)", p.Name, p.ShortName))
+			}
+		} else {
+			b.WriteString("(no projects)")
+		}
+		b.WriteString("\n\n")
+	}
+
+	// Type dropdown
+	b.WriteString(label("Type", fieldType) + "\n")
+	if !d.fieldsLoaded {
+		b.WriteString("  Loading...\n")
+	} else if len(d.typeValues) == 0 {
+		b.WriteString("  (none available)\n")
+	} else if d.focusIndex == fieldType {
+		d.renderInlineList(&b, d.typeValues, d.typeCursor, 5, width, selectedStyle)
+	} else {
+		b.WriteString("  " + d.typeValues[d.typeCursor].Name + "\n")
+	}
+	b.WriteString("\n")
+
+	// State dropdown
+	b.WriteString(label("State", fieldState) + "\n")
+	if !d.fieldsLoaded {
+		b.WriteString("  Loading...\n")
+	} else if len(d.stateValues) == 0 {
+		b.WriteString("  (none available)\n")
+	} else if d.focusIndex == fieldState {
+		d.renderInlineList(&b, d.stateValues, d.stateCursor, 5, width, selectedStyle)
+	} else {
+		if d.stateCursor < len(d.stateValues) {
+			b.WriteString("  " + stateColor(d.stateValues[d.stateCursor].Name) + "\n")
+		}
+	}
+	b.WriteString("\n")
+
+	// Assignee autocomplete
+	b.WriteString(label("Assignee", fieldAssignee) + "\n")
+	if d.focusIndex == fieldAssignee {
+		d.assigneeInput.Width = width - 4
+		b.WriteString("  " + d.assigneeInput.View() + "\n")
+		if len(d.assigneeResults) > 0 && d.assigneeSelected == nil {
+			for i, u := range d.assigneeResults {
+				line := fmt.Sprintf("  %s (%s)", u.Login, u.FullName)
+				if len(line) > width {
+					line = line[:width-1] + "…"
+				}
+				if i == d.assigneeCursor {
+					b.WriteString(selectedStyle.Render(line) + "\n")
+				} else {
+					b.WriteString(line + "\n")
+				}
+			}
+		}
+	} else if d.assigneeSelected != nil {
+		b.WriteString(fmt.Sprintf("  %s (%s)\n", d.assigneeSelected.Login, d.assigneeSelected.FullName))
+	} else {
+		b.WriteString("  (none)\n")
+	}
+	b.WriteString("\n")
+
+	// Summary
+	b.WriteString(label("Summary", fieldSummary) + "\n")
+	d.summaryInput.Width = width - 4
+	b.WriteString("  " + d.summaryInput.View() + "\n\n")
+
+	// Description — calculate remaining height for textarea
+	usedLines := strings.Count(b.String(), "\n")
+	descHeight := height - usedLines - 4
+	if descHeight < 3 {
+		descHeight = 3
+	}
+	d.descInput.SetWidth(width - 4)
+	d.descInput.SetHeight(descHeight)
+	b.WriteString(label("Description", fieldDescription) + "\n")
+	b.WriteString("  " + d.descInput.View() + "\n\n")
+
+	// Hint bar
+	hint := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+	remaining := d.remainingFields()
+	hintText := "tab: next  shift+tab: prev  esc: cancel"
+	if remaining > 0 {
+		hintText = fmt.Sprintf("%d field(s) remaining  |  %s", remaining, hintText)
+	} else {
+		hintText = "ctrl+s: submit  |  " + hintText
+	}
+	b.WriteString(hint.Render(hintText))
+
+	return b.String()
+}
+
+func (d *IssueDialog) renderInlineList(b *strings.Builder, values []model.BundleValue, cursor, maxVisible, width int, selectedStyle lipgloss.Style) {
+	start := 0
+	if cursor >= maxVisible {
+		start = cursor - maxVisible + 1
+	}
+	end := start + maxVisible
+	if end > len(values) {
+		end = len(values)
+	}
+
+	if start > 0 {
+		b.WriteString("  ▲\n")
+	}
+	for i := start; i < end; i++ {
+		line := "  " + values[i].Name
+		if len(line) > width {
+			line = line[:width-1] + "…"
+		}
+		if i == cursor {
+			b.WriteString(selectedStyle.Render(line) + "\n")
+		} else {
+			b.WriteString(line + "\n")
+		}
+	}
+	if end < len(values) {
+		b.WriteString("  ▼\n")
+	}
+}
+
+func (d *IssueDialog) renderComments(width, height int) string {
+	var b strings.Builder
+
+	for _, c := range d.comments {
+		author := "Unknown"
+		if c.Author != nil {
+			author = c.Author.FullName
+		}
+		ts := ""
+		if c.Created > 0 {
+			ts = " (" + formatTimestamp(c.Created) + ")"
+		}
+		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("69"))
+		b.WriteString(header.Render(author+ts) + "\n")
+		b.WriteString(c.Text + "\n\n")
+	}
+
+	content := b.String()
+	d.commentsView.Width = width
+	d.commentsView.Height = height
+	d.commentsView.SetContent(content)
+
+	return d.commentsView.View()
 }
