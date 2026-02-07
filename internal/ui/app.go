@@ -75,6 +75,9 @@ type App struct {
 	finderDialog   FinderDialog
 	projectPicker  ProjectPickerDialog
 	activeProject  *model.Project
+	goingToIssue   bool
+	gotoInput      textinput.Model
+	gotoProject    string
 	restoreIssueID string
 	statePath      string
 }
@@ -107,6 +110,18 @@ func NewApp(service IssueService, state config.State) *App {
 	asi.Placeholder = "User login"
 	asi.Prompt = "Assign to: "
 
+	gti := textinput.New()
+	gti.Placeholder = "Issue number"
+	gti.Prompt = "Go to #: "
+	gti.Validate = func(s string) error {
+		for _, r := range s {
+			if r < '0' || r > '9' {
+				return fmt.Errorf("digits only")
+			}
+		}
+		return nil
+	}
+
 	app := &App{
 		service:      service,
 		list:         l,
@@ -122,8 +137,9 @@ func NewApp(service IssueService, state config.State) *App {
 		commentInput: ci,
 		stateInput:   sti,
 		assignInput:  asi,
-		finderDialog: NewFinderDialog(),
+		finderDialog:  NewFinderDialog(),
 		projectPicker: NewProjectPickerDialog(),
+		gotoInput:     gti,
 	}
 
 	// Restore active project from state
@@ -146,6 +162,22 @@ func (a *App) effectiveQuery() string {
 		query = strings.TrimSpace(query)
 	}
 	return query
+}
+
+// resolveGotoProject returns the ShortName of the project to use for goto.
+// Priority: activeProject > selected issue > first loaded issue.
+// Returns "" if no project context is available.
+func (a *App) resolveGotoProject() string {
+	if a.activeProject != nil {
+		return a.activeProject.ShortName
+	}
+	if a.selected != nil && a.selected.Project != nil {
+		return a.selected.Project.ShortName
+	}
+	if len(a.issues) > 0 && a.issues[0].Project != nil {
+		return a.issues[0].Project.ShortName
+	}
+	return ""
 }
 
 // fetchIssuesCmd creates a command that fetches issues. Captures current query value.
@@ -388,6 +420,33 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, a.fetchIssuesCmd()
 			}
 			return a, cmd
+		}
+
+		// When going to issue, route input to goto field
+		if a.goingToIssue {
+			switch msg.String() {
+			case "enter":
+				num := a.gotoInput.Value()
+				if num != "" {
+					issueID := a.gotoProject + "-" + num
+					a.goingToIssue = false
+					a.gotoInput.Blur()
+					a.listCollapsed = true
+					a.focus = detailPane
+					a.resizePanels()
+					a.loading = true
+					return a, a.fetchDetailCmd(issueID)
+				}
+				return a, nil
+			case "esc":
+				a.goingToIssue = false
+				a.gotoInput.Blur()
+				return a, nil
+			default:
+				var cmd tea.Cmd
+				a.gotoInput, cmd = a.gotoInput.Update(msg)
+				return a, cmd
+			}
 		}
 
 		// Dismiss error on any key
@@ -666,6 +725,17 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.assignInput.SetValue("")
 				return a, a.assignInput.Focus()
 			}
+		case "#":
+			proj := a.resolveGotoProject()
+			if proj == "" {
+				a.err = "Select a project first (press p)"
+				return a, nil
+			}
+			a.gotoProject = proj
+			a.goingToIssue = true
+			a.gotoInput.SetValue("")
+			a.gotoInput.Prompt = fmt.Sprintf("Go to %s-#: ", proj)
+			return a, a.gotoInput.Focus()
 		case "p":
 			a.loading = true
 			service := a.service
@@ -798,6 +868,8 @@ func (a *App) View() string {
 		bottom = a.stateInput.View()
 	} else if a.assigning {
 		bottom = a.assignInput.View()
+	} else if a.goingToIssue {
+		bottom = a.gotoInput.View()
 	} else if a.confirmDelete && a.selected != nil {
 		bottom = errorStyle.Render(fmt.Sprintf("Delete %s? (y/n)", a.selected.IDReadable))
 	} else {
