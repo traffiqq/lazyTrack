@@ -17,6 +17,7 @@ type UIState struct {
 	ListRatio     float64 `yaml:"list_ratio"`
 	ListCollapsed bool    `yaml:"list_collapsed"`
 	SelectedIssue string  `yaml:"selected_issue"`
+	ActiveProject string  `yaml:"active_project,omitempty"`
 }
 
 // DefaultState returns a State with sensible defaults.

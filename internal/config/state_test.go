@@ -115,6 +115,47 @@ func TestSaveState_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestLoadState_ActiveProject(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.yaml")
+
+	content := []byte(`ui:
+  list_ratio: 0.4
+  active_project: "PROJ"
+`)
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	state := LoadStateFromPath(path)
+
+	if state.UI.ActiveProject != "PROJ" {
+		t.Errorf("got ActiveProject %q, want %q", state.UI.ActiveProject, "PROJ")
+	}
+}
+
+func TestSaveState_ActiveProject_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.yaml")
+
+	state := State{
+		UI: UIState{
+			ListRatio:     0.4,
+			ActiveProject: "ABC",
+		},
+	}
+
+	if err := SaveStateToPath(path, state); err != nil {
+		t.Fatalf("save error: %v", err)
+	}
+
+	loaded := LoadStateFromPath(path)
+
+	if loaded.UI.ActiveProject != "ABC" {
+		t.Errorf("got ActiveProject %q, want %q", loaded.UI.ActiveProject, "ABC")
+	}
+}
+
 func TestSaveState_CreatesDirectory(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nested", "dir", "state.yaml")

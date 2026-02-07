@@ -19,6 +19,8 @@ Actions:
   f           Find issue
   s           Set state
   a           Assign issue
+  p           Select project
+  #           Go to issue by number
 
 General:
   H/L, ctrl+←/→  Resize panels
