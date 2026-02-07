@@ -156,6 +156,46 @@ func TestSaveState_ActiveProject_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestSaveState_LastCheckedMentions_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.yaml")
+
+	state := State{
+		UI: UIState{
+			ListRatio:           0.4,
+			LastCheckedMentions: 1707300000000,
+		},
+	}
+
+	if err := SaveStateToPath(path, state); err != nil {
+		t.Fatalf("save error: %v", err)
+	}
+
+	loaded := LoadStateFromPath(path)
+
+	if loaded.UI.LastCheckedMentions != 1707300000000 {
+		t.Errorf("got LastCheckedMentions %d, want 1707300000000", loaded.UI.LastCheckedMentions)
+	}
+}
+
+func TestLoadState_LastCheckedMentions_DefaultsToZero(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.yaml")
+
+	content := []byte(`ui:
+  list_ratio: 0.4
+`)
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	state := LoadStateFromPath(path)
+
+	if state.UI.LastCheckedMentions != 0 {
+		t.Errorf("got LastCheckedMentions %d, want 0", state.UI.LastCheckedMentions)
+	}
+}
+
 func TestSaveState_CreatesDirectory(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nested", "dir", "state.yaml")
