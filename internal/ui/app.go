@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/cf/lazytrack/internal/config"
 	"github.com/cf/lazytrack/internal/model"
 )
 
@@ -71,10 +72,12 @@ type App struct {
 	stateInput    textinput.Model
 	assigning     bool
 	assignInput   textinput.Model
-	finderDialog  FinderDialog
+	finderDialog   FinderDialog
+	restoreIssueID string
+	statePath      string
 }
 
-func NewApp(service IssueService) *App {
+func NewApp(service IssueService, state config.State) *App {
 	delegate := list.NewDefaultDelegate()
 	l := list.New([]list.Item{}, delegate, 0, 0)
 	l.Title = "Issues"
@@ -107,7 +110,10 @@ func NewApp(service IssueService) *App {
 		list:         l,
 		detail:       vp,
 		pageSize:     50,
-		listRatio:    0.4,
+		listRatio:      state.UI.ListRatio,
+		listCollapsed:  state.UI.ListCollapsed,
+		restoreIssueID: state.UI.SelectedIssue,
+		statePath:      config.DefaultStatePath(),
 		searchInput:  si,
 		createDialog: NewCreateDialog(),
 		editDialog:   NewEditDialog(),
@@ -185,7 +191,20 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := a.list.SetItems(items)
 		cmds = append(cmds, cmd)
 		if len(msg.issues) > 0 {
-			cmds = append(cmds, a.fetchDetailCmd(msg.issues[0].IDReadable))
+			targetIdx := 0
+			targetID := msg.issues[0].IDReadable
+			if a.restoreIssueID != "" {
+				for i, issue := range msg.issues {
+					if issue.IDReadable == a.restoreIssueID {
+						targetIdx = i
+						targetID = issue.IDReadable
+						break
+					}
+				}
+				a.restoreIssueID = ""
+			}
+			a.list.Select(targetIdx)
+			cmds = append(cmds, a.fetchDetailCmd(targetID))
 		} else {
 			a.detail.SetContent("No issues found. Press 'c' to create one or '/' to search.")
 		}
@@ -505,6 +524,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch msg.String() {
 		case "ctrl+c", "q":
+			state := config.State{
+				UI: config.UIState{
+					ListRatio:     a.listRatio,
+					ListCollapsed: a.listCollapsed,
+				},
+			}
+			if a.selected != nil {
+				state.UI.SelectedIssue = a.selected.IDReadable
+			}
+			_ = config.SaveStateToPath(a.statePath, state)
 			return a, tea.Quit
 		case "tab":
 			if a.focus == listPane {

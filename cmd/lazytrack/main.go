@@ -37,7 +37,8 @@ func main() {
 
 	client := api.NewClient(cfg.Server.URL, cfg.Server.Token)
 
-	app := ui.NewApp(client)
+	state := config.LoadState()
+	app := ui.NewApp(client, state)
 	p := tea.NewProgram(app, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
