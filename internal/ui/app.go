@@ -749,6 +749,15 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "f":
 			return a, a.finderDialog.Open()
+		case "r":
+			a.loading = true
+			var refreshCmds []tea.Cmd
+			refreshCmds = append(refreshCmds, a.fetchIssuesCmd())
+			if a.selected != nil {
+				issueID := a.selected.IDReadable
+				refreshCmds = append(refreshCmds, a.fetchDetailCmd(issueID))
+			}
+			return a, tea.Batch(refreshCmds...)
 		}
 	}
 
