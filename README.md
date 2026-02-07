@@ -65,12 +65,12 @@ server:
 |---|---|
 | `c` | Create issue |
 | `e` | Edit issue |
-| `d` | Delete issue |
-| `C` | Add comment |
-| `/` | Search/filter with YouTrack query |
+| `d` | Delete issue (confirm with `y`/`n`) |
+| `C` | Add comment (`ctrl+d` to submit, `esc` to cancel) |
+| `/` | Search/filter with YouTrack query (`enter` to apply, `esc` to cancel) |
 | `f` | Find issue (fuzzy finder) |
-| `s` | Set state |
-| `a` | Assign issue |
+| `s` | Set state (`enter` to apply, `esc` to cancel) |
+| `a` | Assign issue (`enter` to apply, `esc` to cancel) |
 
 ### General
 
@@ -79,7 +79,7 @@ server:
 | `H`/`L`, `ctrl+left`/`ctrl+right` | Resize panels |
 | `ctrl+e` | Toggle issue list |
 | `?` | Toggle help |
-| `q` | Quit |
+| `q`, `ctrl+c` | Quit |
 
 ## Development
 
