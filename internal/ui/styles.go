@@ -7,14 +7,6 @@ import (
 )
 
 var (
-	panelStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("240"))
-
-	focusedPanelStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("69"))
-
 	statusBarStyle = lipgloss.NewStyle().
 		Background(lipgloss.Color("236")).
 		Padding(0, 1)

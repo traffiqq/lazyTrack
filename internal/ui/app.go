@@ -85,7 +85,7 @@ type App struct {
 func NewApp(service IssueService, state config.State) *App {
 	delegate := list.NewDefaultDelegate()
 	l := list.New([]list.Item{}, delegate, 0, 0)
-	l.Title = "Issues"
+	l.Title = ""
 	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
@@ -811,53 +811,41 @@ func (a *App) View() string {
 	var panels string
 	panelHeight := a.height - 3
 
+	// Determine detail panel title
+	detailTitle := iconFile + " Detail"
+	if a.selected != nil {
+		detailTitle = iconFile + " " + a.selected.IDReadable
+	}
+
 	if a.listCollapsed {
 		innerWidth := a.width - 2
-		rightPanel := focusedPanelStyle.
-			Width(innerWidth).
-			Height(panelHeight).
-			Render(a.detail.View())
-		panels = rightPanel
+		if a.commenting {
+			commentContent := lipgloss.NewStyle().Padding(1, 2).Render(
+				a.commentInput.View() + "\n\n" +
+					hintDescStyle.Render("ctrl+d: submit  esc: cancel"),
+			)
+			panels = renderTitledPanel(iconFile+" Add Comment", commentContent, innerWidth, panelHeight, true, lipgloss.Color("99"))
+		} else {
+			panels = renderTitledPanel(detailTitle, a.detail.View(), innerWidth, panelHeight, true, lipgloss.Color("69"))
+		}
 	} else {
 		listWidth := int(float64(a.width) * a.listRatio)
 		detailWidth := a.width - listWidth
-
-		leftStyle := panelStyle
-		rightStyle := panelStyle
-		if a.focus == listPane {
-			leftStyle = focusedPanelStyle
-		} else {
-			rightStyle = focusedPanelStyle
-		}
-
 		innerListWidth := listWidth - 2
 		innerDetailWidth := detailWidth - 2
 
-		leftPanel := leftStyle.
-			Width(innerListWidth).
-			Height(panelHeight).
-			Render(a.list.View())
+		leftPanel := renderTitledPanel(iconList+" Issues", a.list.View(), innerListWidth, panelHeight, a.focus == listPane, lipgloss.Color("78"))
 
-		rightPanel := rightStyle.
-			Width(innerDetailWidth).
-			Height(panelHeight).
-			Render(a.detail.View())
-
-		panels = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
-
-		// Comment overlay replaces right panel
 		if a.commenting {
-			commentView := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("99")).
-				Padding(1, 2).
-				Width(detailWidth - 2).
-				Render(
-					titleStyle.Render("Add Comment")+"\n\n"+
-						a.commentInput.View()+"\n\n"+
-						lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render("ctrl+d: submit  esc: cancel"),
-				)
-			panels = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, commentView)
+			commentContent := lipgloss.NewStyle().Padding(1, 2).Render(
+				a.commentInput.View() + "\n\n" +
+					hintDescStyle.Render("ctrl+d: submit  esc: cancel"),
+			)
+			rightPanel := renderTitledPanel(iconFile+" Add Comment", commentContent, innerDetailWidth, panelHeight, true, lipgloss.Color("99"))
+			panels = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
+		} else {
+			rightPanel := renderTitledPanel(detailTitle, a.detail.View(), innerDetailWidth, panelHeight, a.focus == detailPane, lipgloss.Color("69"))
+			panels = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 		}
 	}
 
