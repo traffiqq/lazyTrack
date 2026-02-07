@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -343,4 +345,177 @@ func (d *IssueDialog) SetAssigneeResults(users []model.User, gen int) {
 	}
 	d.assigneeResults = users
 	d.assigneeCursor = 0
+}
+
+func (d *IssueDialog) Update(msg tea.Msg) (IssueDialog, tea.Cmd) {
+	if !d.active {
+		return *d, nil
+	}
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "esc":
+			d.Close()
+			return *d, nil
+
+		case "ctrl+s":
+			if d.isValid() {
+				d.submitted = true
+				d.Close()
+			}
+			return *d, nil
+
+		case "tab":
+			d.nextField()
+			return *d, d.updateFocus()
+
+		case "shift+tab":
+			d.prevField()
+			return *d, d.updateFocus()
+		}
+
+		// Focus-scoped key handling
+		switch d.focusIndex {
+		case fieldProject:
+			switch msg.String() {
+			case "left", "h":
+				if len(d.projects) > 0 {
+					d.projectIndex = (d.projectIndex + len(d.projects) - 1) % len(d.projects)
+					d.projectChanged = true
+					d.fieldsLoaded = false
+					d.typeValues = nil
+					d.stateValues = nil
+				}
+				return *d, nil
+			case "right", "l":
+				if len(d.projects) > 0 {
+					d.projectIndex = (d.projectIndex + 1) % len(d.projects)
+					d.projectChanged = true
+					d.fieldsLoaded = false
+					d.typeValues = nil
+					d.stateValues = nil
+				}
+				return *d, nil
+			}
+			return *d, nil
+
+		case fieldType:
+			switch msg.String() {
+			case "up", "k":
+				if d.typeCursor > 0 {
+					d.typeCursor--
+				}
+				return *d, nil
+			case "down", "j":
+				if d.typeCursor < len(d.typeValues)-1 {
+					d.typeCursor++
+				}
+				return *d, nil
+			}
+			return *d, nil
+
+		case fieldState:
+			switch msg.String() {
+			case "up", "k":
+				if d.stateCursor > 0 {
+					d.stateCursor--
+				}
+				return *d, nil
+			case "down", "j":
+				if d.stateCursor < len(d.stateValues)-1 {
+					d.stateCursor++
+				}
+				return *d, nil
+			}
+			return *d, nil
+
+		case fieldAssignee:
+			// If showing autocomplete results and user navigates/selects
+			if len(d.assigneeResults) > 0 && d.assigneeSelected == nil {
+				switch msg.String() {
+				case "up", "k":
+					if d.assigneeCursor > 0 {
+						d.assigneeCursor--
+					}
+					return *d, nil
+				case "down", "j":
+					if d.assigneeCursor < len(d.assigneeResults)-1 {
+						d.assigneeCursor++
+					}
+					return *d, nil
+				case "enter":
+					user := d.assigneeResults[d.assigneeCursor]
+					d.assigneeSelected = &user
+					d.assigneeInput.SetValue(user.Login)
+					d.assigneeResults = nil
+					d.assigneeCursor = 0
+					d.nextField()
+					return *d, d.updateFocus()
+				}
+			}
+
+			// Route to text input and debounce
+			var cmd tea.Cmd
+			d.assigneeInput, cmd = d.assigneeInput.Update(msg)
+
+			// Clear previous selection when typing changes
+			if d.assigneeSelected != nil && d.assigneeInput.Value() != d.assigneeSelected.Login {
+				d.assigneeSelected = nil
+			}
+
+			// Debounce search
+			if d.assigneeInput.Value() != "" && d.assigneeSelected == nil {
+				d.assigneeGen++
+				gen := d.assigneeGen
+				debounceCmd := tea.Tick(300*time.Millisecond, func(t time.Time) tea.Msg {
+					return assigneeDebounceMsg{generation: gen}
+				})
+				return *d, tea.Batch(cmd, debounceCmd)
+			}
+			if d.assigneeInput.Value() == "" {
+				d.assigneeResults = nil
+			}
+			return *d, cmd
+
+		case fieldSummary:
+			var cmd tea.Cmd
+			d.summaryInput, cmd = d.summaryInput.Update(msg)
+			return *d, cmd
+
+		case fieldDescription:
+			var cmd tea.Cmd
+			d.descInput, cmd = d.descInput.Update(msg)
+			return *d, cmd
+
+		case fieldComments:
+			switch msg.String() {
+			case "up", "k":
+				d.commentsView.LineUp(1)
+				return *d, nil
+			case "down", "j":
+				d.commentsView.LineDown(1)
+				return *d, nil
+			}
+			return *d, nil
+		}
+	}
+
+	// Non-key messages: route to focused text inputs for cursor blink etc.
+	switch d.focusIndex {
+	case fieldAssignee:
+		var cmd tea.Cmd
+		d.assigneeInput, cmd = d.assigneeInput.Update(msg)
+		return *d, cmd
+	case fieldSummary:
+		var cmd tea.Cmd
+		d.summaryInput, cmd = d.summaryInput.Update(msg)
+		return *d, cmd
+	case fieldDescription:
+		var cmd tea.Cmd
+		d.descInput, cmd = d.descInput.Update(msg)
+		return *d, cmd
+	}
+
+	return *d, nil
 }
