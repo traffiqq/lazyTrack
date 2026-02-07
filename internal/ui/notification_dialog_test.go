@@ -3,6 +3,8 @@ package ui
 import (
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/cf/lazytrack/internal/model"
 )
 
@@ -85,5 +87,118 @@ func TestNotificationDialog_Close(t *testing.T) {
 
 	if d.active {
 		t.Error("expected not active after Close")
+	}
+}
+
+func TestNotificationDialog_EscCloses(t *testing.T) {
+	d := NewNotificationDialog()
+	d.Open(0)
+	d.SetResults([]model.Issue{{IDReadable: "A-1"}})
+
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyEsc})
+
+	if d.active {
+		t.Error("expected not active after esc")
+	}
+	if d.submitted {
+		t.Error("expected not submitted after esc")
+	}
+}
+
+func TestNotificationDialog_EnterSelectsIssue(t *testing.T) {
+	d := NewNotificationDialog()
+	d.Open(0)
+	d.SetResults([]model.Issue{
+		{IDReadable: "A-1", Summary: "First"},
+		{IDReadable: "A-2", Summary: "Second"},
+	})
+
+	// Move to second item
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyDown})
+	// Select it
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if !d.submitted {
+		t.Error("expected submitted after enter")
+	}
+	if d.selectedIssue == nil {
+		t.Fatal("expected non-nil selectedIssue")
+	}
+	if d.selectedIssue.IDReadable != "A-2" {
+		t.Errorf("got selectedIssue %q, want A-2", d.selectedIssue.IDReadable)
+	}
+	if d.active {
+		t.Error("expected not active after enter")
+	}
+}
+
+func TestNotificationDialog_EnterNoResults(t *testing.T) {
+	d := NewNotificationDialog()
+	d.Open(0)
+	d.SetResults([]model.Issue{})
+
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if d.submitted {
+		t.Error("expected not submitted with no results")
+	}
+}
+
+func TestNotificationDialog_CursorNavigation(t *testing.T) {
+	d := NewNotificationDialog()
+	d.Open(0)
+	d.SetResults([]model.Issue{
+		{IDReadable: "A-1"},
+		{IDReadable: "A-2"},
+		{IDReadable: "A-3"},
+	})
+
+	// down
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if d.cursor != 1 {
+		t.Errorf("got cursor %d, want 1 after down", d.cursor)
+	}
+
+	// j
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if d.cursor != 2 {
+		t.Errorf("got cursor %d, want 2 after j", d.cursor)
+	}
+
+	// Clamp at bottom
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if d.cursor != 2 {
+		t.Errorf("got cursor %d, want 2 (clamped at bottom)", d.cursor)
+	}
+
+	// up
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if d.cursor != 1 {
+		t.Errorf("got cursor %d, want 1 after up", d.cursor)
+	}
+
+	// k
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if d.cursor != 0 {
+		t.Errorf("got cursor %d, want 0 after k", d.cursor)
+	}
+
+	// Clamp at top
+	d, _ = d.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if d.cursor != 0 {
+		t.Errorf("got cursor %d, want 0 (clamped at top)", d.cursor)
+	}
+}
+
+func TestNotificationDialog_InactiveUpdate(t *testing.T) {
+	d := NewNotificationDialog()
+	// Not opened — should be a no-op
+	d, cmd := d.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if d.active {
+		t.Error("should remain inactive")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd when inactive")
 	}
 }
