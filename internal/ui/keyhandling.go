@@ -481,6 +481,9 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "r":
 		a.loading = true
+		if a.selected != nil {
+			a.restoreIssueID = a.selected.IDReadable
+		}
 		var refreshCmds []tea.Cmd
 		refreshCmds = append(refreshCmds, a.fetchIssuesCmd())
 		if a.selected != nil {
