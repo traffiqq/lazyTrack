@@ -152,6 +152,105 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
+	// Leader key dispatch: space was pressed last, now handle the action key
+	if a.leaderActive {
+		a.leaderActive = false
+		switch msg.String() {
+		case "c":
+			a.loading = true
+			service := a.service
+			return a, func() tea.Msg {
+				projects, err := service.ListProjects()
+				if err != nil {
+					return errMsg{err}
+				}
+				return projectsLoadedMsg{projects}
+			}
+		case "e":
+			if a.selected != nil {
+				issue := a.selected
+				comments := issue.Comments
+				cmd := a.issueDialog.OpenEdit(issue, comments)
+				if issue.Project != nil {
+					projectID := issue.Project.ID
+					service := a.service
+					return a, tea.Batch(cmd, func() tea.Msg {
+						fields, err := service.ListProjectCustomFields(projectID)
+						if err != nil {
+							return errMsg{err}
+						}
+						return customFieldsLoadedMsg{fields}
+					})
+				}
+				return a, cmd
+			}
+		case "d":
+			if a.selected != nil {
+				a.confirmDelete = true
+				return a, nil
+			}
+		case "m":
+			if a.selected != nil {
+				a.commenting = true
+				a.commentInput.SetValue("")
+				return a, a.commentInput.Focus()
+			}
+		case "s":
+			if a.selected != nil {
+				a.settingState = true
+				a.stateInput.SetValue("")
+				return a, a.stateInput.Focus()
+			}
+		case "a":
+			if a.selected != nil {
+				a.assigning = true
+				a.assignInput.SetValue("")
+				return a, a.assignInput.Focus()
+			}
+		case "p":
+			a.loading = true
+			service := a.service
+			return a, func() tea.Msg {
+				projects, err := service.ListProjects()
+				if err != nil {
+					return errMsg{err}
+				}
+				return projectsForPickerMsg{projects}
+			}
+		case "f":
+			return a, a.finderDialog.Open()
+		case "n":
+			if a.currentUser == nil {
+				a.err = "Could not load user — mentions unavailable"
+				return a, nil
+			}
+			a.notifDialog.Open(a.lastCheckedMentions)
+			service := a.service
+			query := "mentioned: me sort by: updated desc"
+			if a.activeProject != nil {
+				query = "project: " + a.activeProject.ShortName + " " + query
+			}
+			return a, func() tea.Msg {
+				issues, err := service.ListIssues(query, 0, 50)
+				if err != nil {
+					return errMsg{err}
+				}
+				return mentionsLoadedMsg{issues}
+			}
+		case "t":
+			a.listCollapsed = !a.listCollapsed
+			if a.listCollapsed {
+				a.focus = detailPane
+			} else {
+				a.focus = listPane
+			}
+			a.resizePanels()
+			return a, nil
+		}
+		// Unrecognized key — just dismiss leader mode
+		return a, nil
+	}
+
 	// When confirming delete, handle y/n
 	if a.confirmDelete {
 		switch msg.String() {
@@ -357,53 +456,8 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.searching = true
 		a.searchInput.SetValue(a.query)
 		return a, a.searchInput.Focus()
-	case "c":
-		a.loading = true
-		service := a.service
-		return a, func() tea.Msg {
-			projects, err := service.ListProjects()
-			if err != nil {
-				return errMsg{err}
-			}
-			return projectsLoadedMsg{projects}
-		}
-	case "e":
-		if a.selected != nil {
-			issue := a.selected
-			comments := issue.Comments
-			cmd := a.issueDialog.OpenEdit(issue, comments)
-			if issue.Project != nil {
-				projectID := issue.Project.ID
-				service := a.service
-				return a, tea.Batch(cmd, func() tea.Msg {
-					fields, err := service.ListProjectCustomFields(projectID)
-					if err != nil {
-						return errMsg{err}
-					}
-					return customFieldsLoadedMsg{fields}
-				})
-			}
-			return a, cmd
-		}
-	case "d":
-		if a.selected != nil {
-			a.confirmDelete = true
-			return a, nil
-		}
-	case "C":
-		if a.selected != nil {
-			a.commenting = true
-			a.commentInput.SetValue("")
-			return a, a.commentInput.Focus()
-		}
-	case "ctrl+e":
-		a.listCollapsed = !a.listCollapsed
-		if a.listCollapsed {
-			a.focus = detailPane
-		} else {
-			a.focus = listPane
-		}
-		a.resizePanels()
+	case " ":
+		a.leaderActive = true
 		return a, nil
 	case "ctrl+right", "L":
 		if !a.listCollapsed {
@@ -426,18 +480,6 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "?":
 		a.showHelp = !a.showHelp
 		return a, nil
-	case "s":
-		if a.selected != nil {
-			a.settingState = true
-			a.stateInput.SetValue("")
-			return a, a.stateInput.Focus()
-		}
-	case "a":
-		if a.selected != nil {
-			a.assigning = true
-			a.assignInput.SetValue("")
-			return a, a.assignInput.Focus()
-		}
 	case "#":
 		proj := a.resolveGotoProject()
 		if proj == "" {
@@ -449,36 +491,6 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.gotoInput.SetValue("")
 		a.gotoInput.Prompt = fmt.Sprintf("Go to %s-#: ", proj)
 		return a, a.gotoInput.Focus()
-	case "p":
-		a.loading = true
-		service := a.service
-		return a, func() tea.Msg {
-			projects, err := service.ListProjects()
-			if err != nil {
-				return errMsg{err}
-			}
-			return projectsForPickerMsg{projects}
-		}
-	case "f":
-		return a, a.finderDialog.Open()
-	case "n":
-		if a.currentUser == nil {
-			a.err = "Could not load user — mentions unavailable"
-			return a, nil
-		}
-		a.notifDialog.Open(a.lastCheckedMentions)
-		service := a.service
-		query := "mentioned: me sort by: updated desc"
-		if a.activeProject != nil {
-			query = "project: " + a.activeProject.ShortName + " " + query
-		}
-		return a, func() tea.Msg {
-			issues, err := service.ListIssues(query, 0, 50)
-			if err != nil {
-				return errMsg{err}
-			}
-			return mentionsLoadedMsg{issues}
-		}
 	case "r":
 		a.loading = true
 		if a.selected != nil {
