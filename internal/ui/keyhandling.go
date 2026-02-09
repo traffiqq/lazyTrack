@@ -494,6 +494,18 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			refreshCmds = append(refreshCmds, a.fetchMentionsCmd())
 		}
 		return a, tea.Batch(refreshCmds...)
+	case "1":
+		a.filterMe = !a.filterMe
+		a.loading = true
+		return a, a.fetchIssuesCmd()
+	case "2":
+		a.filterBug = !a.filterBug
+		a.loading = true
+		return a, a.fetchIssuesCmd()
+	case "3":
+		a.filterTask = !a.filterTask
+		a.loading = true
+		return a, a.fetchIssuesCmd()
 	}
 
 	// Key not handled — return nil to signal Update to fall through
