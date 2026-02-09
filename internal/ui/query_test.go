@@ -216,6 +216,34 @@ func TestEffectiveQuery_NoFilters(t *testing.T) {
 	}
 }
 
+type capturingMockService struct {
+	mockService
+	lastQuery string
+}
+
+func (m *capturingMockService) ListIssues(query string, skip, top int) ([]model.Issue, error) {
+	m.lastQuery = query
+	return nil, nil
+}
+
+func TestFetchMoreIssuesCmd_UsesEffectiveQuery(t *testing.T) {
+	svc := &capturingMockService{}
+	app := NewApp(svc, config.DefaultState())
+	app.activeProject = &model.Project{ShortName: "PROJ"}
+	app.filterMe = true
+	app.query = "#Unresolved"
+	app.issues = make([]model.Issue, 50) // simulate first page loaded
+
+	cmd := app.fetchMoreIssuesCmd()
+	// Execute the command to capture the query
+	cmd()
+
+	want := "project: PROJ Assignee: me #Unresolved"
+	if svc.lastQuery != want {
+		t.Errorf("fetchMoreIssuesCmd query = %q, want %q", svc.lastQuery, want)
+	}
+}
+
 // mockService implements IssueService for testing.
 type mockService struct{}
 

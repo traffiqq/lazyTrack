@@ -63,7 +63,7 @@ func (a *App) fetchIssuesCmd() tea.Cmd {
 
 // fetchMoreIssuesCmd creates a command to load the next page of issues.
 func (a *App) fetchMoreIssuesCmd() tea.Cmd {
-	query := a.query
+	query := a.effectiveQuery()
 	skip := len(a.issues)
 	pageSize := a.pageSize
 	service := a.service
