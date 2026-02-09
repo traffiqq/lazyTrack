@@ -720,7 +720,7 @@ func (d *IssueDialog) renderComments(width, height int) string {
 		}
 		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("69"))
 		b.WriteString(header.Render(author+ts) + "\n")
-		b.WriteString(c.Text + "\n\n")
+		b.WriteString(renderMarkdown(c.Text, width) + "\n\n")
 	}
 
 	content := b.String()
