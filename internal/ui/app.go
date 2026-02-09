@@ -95,6 +95,9 @@ type App struct {
 	lastCheckedMentions int64
 	mentionedIssues    []model.Issue
 	unreadMentionCount int
+	filterMe           bool
+	filterBug          bool
+	filterTask         bool
 }
 
 func NewApp(service IssueService, state config.State) *App {

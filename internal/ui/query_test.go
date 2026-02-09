@@ -108,6 +108,114 @@ func TestResolveGotoProject_NoContext(t *testing.T) {
 	}
 }
 
+func TestEffectiveQuery_FilterMe(t *testing.T) {
+	app := NewApp(&mockService{}, config.DefaultState())
+	app.filterMe = true
+
+	got := app.effectiveQuery()
+	want := "Assignee: me"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestEffectiveQuery_FilterBug(t *testing.T) {
+	app := NewApp(&mockService{}, config.DefaultState())
+	app.filterBug = true
+
+	got := app.effectiveQuery()
+	want := "Type: Bug"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestEffectiveQuery_FilterTask(t *testing.T) {
+	app := NewApp(&mockService{}, config.DefaultState())
+	app.filterTask = true
+
+	got := app.effectiveQuery()
+	want := "Type: Task"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestEffectiveQuery_FilterMeAndBug(t *testing.T) {
+	app := NewApp(&mockService{}, config.DefaultState())
+	app.filterMe = true
+	app.filterBug = true
+
+	got := app.effectiveQuery()
+	want := "Assignee: me Type: Bug"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestEffectiveQuery_FilterBugAndTask(t *testing.T) {
+	app := NewApp(&mockService{}, config.DefaultState())
+	app.filterBug = true
+	app.filterTask = true
+
+	got := app.effectiveQuery()
+	want := "Type: Bug,Task"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestEffectiveQuery_AllFilters(t *testing.T) {
+	app := NewApp(&mockService{}, config.DefaultState())
+	app.filterMe = true
+	app.filterBug = true
+	app.filterTask = true
+
+	got := app.effectiveQuery()
+	want := "Assignee: me Type: Bug,Task"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestEffectiveQuery_FiltersWithProject(t *testing.T) {
+	app := NewApp(&mockService{}, config.DefaultState())
+	app.activeProject = &model.Project{ShortName: "PROJ"}
+	app.filterMe = true
+	app.filterBug = true
+
+	got := app.effectiveQuery()
+	want := "project: PROJ Assignee: me Type: Bug"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestEffectiveQuery_FiltersWithProjectAndQuery(t *testing.T) {
+	app := NewApp(&mockService{}, config.DefaultState())
+	app.activeProject = &model.Project{ShortName: "PROJ"}
+	app.query = "#Unresolved"
+	app.filterMe = true
+	app.filterBug = true
+
+	got := app.effectiveQuery()
+	want := "project: PROJ Assignee: me Type: Bug #Unresolved"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestEffectiveQuery_NoFilters(t *testing.T) {
+	app := NewApp(&mockService{}, config.DefaultState())
+	app.query = "sort by: updated"
+
+	got := app.effectiveQuery()
+	want := "sort by: updated"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 // mockService implements IssueService for testing.
 type mockService struct{}
 

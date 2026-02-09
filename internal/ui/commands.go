@@ -8,14 +8,28 @@ import (
 	"github.com/cf/lazytrack/internal/model"
 )
 
-// effectiveQuery returns the search query with project filter prepended if applicable.
+// effectiveQuery returns the search query with project filter, filter bar clauses,
+// and user query combined.
 func (a *App) effectiveQuery() string {
-	query := a.query
-	if a.activeProject != nil && !strings.Contains(strings.ToLower(query), "project:") {
-		query = "project: " + a.activeProject.ShortName + " " + query
-		query = strings.TrimSpace(query)
+	var parts []string
+
+	if a.activeProject != nil && !strings.Contains(strings.ToLower(a.query), "project:") {
+		parts = append(parts, "project: "+a.activeProject.ShortName)
 	}
-	return query
+
+	if a.filterMe {
+		parts = append(parts, "Assignee: me")
+	}
+
+	if tf := buildTypeFilter(a.filterBug, a.filterTask); tf != "" {
+		parts = append(parts, tf)
+	}
+
+	if a.query != "" {
+		parts = append(parts, a.query)
+	}
+
+	return strings.Join(parts, " ")
 }
 
 // resolveGotoProject returns the ShortName of the project to use for goto.
