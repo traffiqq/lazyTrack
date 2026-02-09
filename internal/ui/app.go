@@ -188,6 +188,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.height = msg.Height
 		a.ready = true
 		a.resizePanels()
+		a.reRenderContent()
 		return a, nil
 
 	case issuesLoadedMsg:
@@ -464,4 +465,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return a, tea.Batch(cmds...)
 }
 
-
+func (a *App) reRenderContent() {
+	if a.selected == nil {
+		return
+	}
+	a.detail.SetContent(renderIssueDetail(a.selected, a.detail.Width))
+	if len(a.selected.Comments) > 0 {
+		a.comments.SetContent(renderComments(a.selected.Comments, a.comments.Width))
+	}
+}

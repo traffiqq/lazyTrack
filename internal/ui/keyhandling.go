@@ -246,6 +246,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				a.focus = listPane
 			}
 			a.resizePanels()
+			a.reRenderContent()
 			return a, nil
 		case "v":
 			if a.selected != nil {
@@ -481,6 +482,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				a.listRatio = 0.8
 			}
 			a.resizePanels()
+			a.reRenderContent()
 		}
 		return a, nil
 	case "ctrl+left", "H":
@@ -490,6 +492,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				a.listRatio = 0.2
 			}
 			a.resizePanels()
+			a.reRenderContent()
 		}
 		return a, nil
 	case "?":
