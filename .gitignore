@@ -19,6 +19,7 @@ config.yaml
 # Claude Code
 .claude/
 CLAUDE.md
+plans/
 docs/plans/
 
 # Worktrees
