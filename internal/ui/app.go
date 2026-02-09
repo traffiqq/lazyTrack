@@ -216,7 +216,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.list.Select(targetIdx)
 			cmds = append(cmds, a.fetchDetailCmd(targetID))
 		} else {
-			a.detail.SetContent("No issues found. Press 'c' to create one or '/' to search.")
+			a.detail.SetContent("No issues found. Press space+c to create one or '/' to search.")
 		}
 		return a, tea.Batch(cmds...)
 
