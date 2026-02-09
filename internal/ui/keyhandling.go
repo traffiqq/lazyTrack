@@ -483,7 +483,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "#":
 		proj := a.resolveGotoProject()
 		if proj == "" {
-			a.err = "Select a project first (press p)"
+			a.err = "Select a project first (space+p)"
 			return a, nil
 		}
 		a.gotoProject = proj
