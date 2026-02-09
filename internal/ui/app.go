@@ -236,10 +236,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.err = ""
 		a.loading = false
 		a.selected = msg.issue
-		a.detail.SetContent(renderIssueDetail(msg.issue))
+		a.resizePanels()
+		a.detail.SetContent(renderIssueDetail(msg.issue, a.detail.Width))
 		a.detail.GotoTop()
 		if len(msg.issue.Comments) > 0 {
-			a.comments.SetContent(renderComments(msg.issue.Comments))
+			a.comments.SetContent(renderComments(msg.issue.Comments, a.comments.Width))
 			a.comments.GotoTop()
 		} else {
 			a.comments.SetContent("")
@@ -247,7 +248,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.focus = detailPane
 			}
 		}
-		a.resizePanels()
 		return a, nil
 
 	case projectsLoadedMsg:

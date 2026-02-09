@@ -8,7 +8,7 @@ import (
 	"github.com/cf/lazytrack/internal/model"
 )
 
-func renderIssueDetail(issue *model.Issue) string {
+func renderIssueDetail(issue *model.Issue, width int) string {
 	var b strings.Builder
 
 	b.WriteString(titleStyle.Render(issue.IDReadable+" "+issue.Summary) + "\n\n")
@@ -40,7 +40,7 @@ func renderIssueDetail(issue *model.Issue) string {
 	b.WriteString("\n────────────────────────────────\n\n")
 
 	if issue.Description != "" {
-		b.WriteString(issue.Description + "\n")
+		b.WriteString(renderMarkdown(issue.Description, width) + "\n")
 	} else {
 		b.WriteString("(no description)\n")
 	}
@@ -48,7 +48,7 @@ func renderIssueDetail(issue *model.Issue) string {
 	return b.String()
 }
 
-func renderComments(comments []model.Comment) string {
+func renderComments(comments []model.Comment, width int) string {
 	var b strings.Builder
 
 	for i := len(comments) - 1; i >= 0; i-- {
@@ -65,7 +65,7 @@ func renderComments(comments []model.Comment) string {
 		if c.Created > 0 {
 			ts = " (" + formatTimestamp(c.Created) + ")"
 		}
-		fmt.Fprintf(&b, "%s %s%s\n%s\n", iconComment, author, ts, c.Text)
+		fmt.Fprintf(&b, "%s %s%s\n%s\n", iconComment, author, ts, renderMarkdown(c.Text, width))
 		if i > 0 {
 			b.WriteString("\n")
 		}
