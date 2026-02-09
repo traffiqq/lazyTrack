@@ -98,6 +98,7 @@ type App struct {
 	filterMe           bool
 	filterBug          bool
 	filterTask         bool
+	leaderActive       bool
 }
 
 func NewApp(service IssueService, state config.State) *App {
