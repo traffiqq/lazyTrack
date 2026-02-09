@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -246,6 +247,20 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			a.resizePanels()
 			return a, nil
+		case "v":
+			if a.selected != nil {
+				issue := a.selected
+				tempPath, err := writeIssueTempFile(issue)
+				if err != nil {
+					a.err = "Failed to create temp file: " + err.Error()
+					return a, nil
+				}
+				editor := resolveEditor()
+				c := exec.Command(editor, tempPath)
+				return a, tea.ExecProcess(c, func(err error) tea.Msg {
+					return editorFinishedMsg{err: err, tempPath: tempPath, original: issue}
+				})
+			}
 		}
 		// Unrecognized key — just dismiss leader mode
 		return a, nil

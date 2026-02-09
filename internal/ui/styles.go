@@ -92,6 +92,7 @@ var (
 		{"p", "project"},
 		{"s", "state"},
 		{"t", "toggle"},
+		{"v", "vim edit"},
 	}
 )
 

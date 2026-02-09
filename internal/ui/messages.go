@@ -65,3 +65,9 @@ type currentUserLoadedMsg struct {
 type mentionsLoadedMsg struct {
 	issues []model.Issue
 }
+
+type editorFinishedMsg struct {
+	err      error
+	tempPath string
+	original *model.Issue
+}
