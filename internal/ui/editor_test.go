@@ -102,6 +102,212 @@ func TestWriteIssueTempFile_EmptyFields(t *testing.T) {
 	}
 }
 
+func TestParseIssueTempFile(t *testing.T) {
+	content := `---
+summary: Updated summary
+state: Fixed
+assignee: janedoe
+type: Task
+---
+
+Updated description here.
+`
+	f, err := os.CreateTemp("", "lazytrack-test-*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(content)
+	f.Close()
+
+	parsed, err := parseIssueTempFile(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if parsed.summary != "Updated summary" {
+		t.Errorf("summary = %q, want %q", parsed.summary, "Updated summary")
+	}
+	if parsed.state != "Fixed" {
+		t.Errorf("state = %q, want %q", parsed.state, "Fixed")
+	}
+	if parsed.assignee != "janedoe" {
+		t.Errorf("assignee = %q, want %q", parsed.assignee, "janedoe")
+	}
+	if parsed.issueType != "Task" {
+		t.Errorf("type = %q, want %q", parsed.issueType, "Task")
+	}
+	if strings.TrimSpace(parsed.description) != "Updated description here." {
+		t.Errorf("description = %q, want %q", strings.TrimSpace(parsed.description), "Updated description here.")
+	}
+}
+
+func TestParseIssueTempFile_EmptyAssignee(t *testing.T) {
+	content := `---
+summary: Test
+state: Open
+assignee:
+type: Bug
+---
+
+Desc.
+`
+	f, err := os.CreateTemp("", "lazytrack-test-*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(content)
+	f.Close()
+
+	parsed, err := parseIssueTempFile(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if parsed.assignee != "" {
+		t.Errorf("assignee = %q, want empty", parsed.assignee)
+	}
+}
+
+func TestParseIssueTempFile_Malformed(t *testing.T) {
+	content := `no front matter here`
+	f, err := os.CreateTemp("", "lazytrack-test-*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(content)
+	f.Close()
+
+	_, err = parseIssueTempFile(f.Name())
+	if err == nil {
+		t.Error("expected error for malformed file")
+	}
+}
+
+func TestBuildEditorUpdateFields_NoChanges(t *testing.T) {
+	issue := &model.Issue{
+		Summary:     "Original",
+		Description: "Desc",
+		CustomFields: []model.CustomField{
+			makeCustomField("State", "Open"),
+			makeCustomField("Type", "Bug"),
+			makeCustomFieldUser("Assignee", "alice", "Alice"),
+		},
+	}
+	parsed := parsedIssue{
+		summary:     "Original",
+		description: "Desc",
+		state:       "Open",
+		issueType:   "Bug",
+		assignee:    "alice",
+	}
+
+	fields := buildEditorUpdateFields(issue, parsed)
+	if fields != nil {
+		t.Errorf("expected nil fields for no changes, got %v", fields)
+	}
+}
+
+func TestBuildEditorUpdateFields_SummaryChanged(t *testing.T) {
+	issue := &model.Issue{
+		Summary:     "Original",
+		Description: "Desc",
+		CustomFields: []model.CustomField{
+			makeCustomField("State", "Open"),
+			makeCustomField("Type", "Bug"),
+		},
+	}
+	parsed := parsedIssue{
+		summary:     "Updated title",
+		description: "Desc",
+		state:       "Open",
+		issueType:   "Bug",
+	}
+
+	fields := buildEditorUpdateFields(issue, parsed)
+	if fields == nil {
+		t.Fatal("expected non-nil fields")
+	}
+	if fields["summary"] != "Updated title" {
+		t.Errorf("summary = %v, want %q", fields["summary"], "Updated title")
+	}
+}
+
+func TestBuildEditorUpdateFields_AssigneeCleared(t *testing.T) {
+	issue := &model.Issue{
+		Summary:     "Test",
+		Description: "Desc",
+		CustomFields: []model.CustomField{
+			makeCustomField("State", "Open"),
+			makeCustomField("Type", "Bug"),
+			makeCustomFieldUser("Assignee", "alice", "Alice"),
+		},
+	}
+	parsed := parsedIssue{
+		summary:     "Test",
+		description: "Desc",
+		state:       "Open",
+		issueType:   "Bug",
+		assignee:    "", // cleared
+	}
+
+	fields := buildEditorUpdateFields(issue, parsed)
+	if fields == nil {
+		t.Fatal("expected non-nil fields")
+	}
+	cf, ok := fields["customFields"]
+	if !ok {
+		t.Fatal("expected customFields key")
+	}
+	cfSlice := cf.([]map[string]any)
+	found := false
+	for _, f := range cfSlice {
+		if f["name"] == "Assignee" && f["value"] == nil {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected Assignee with nil value for unassign")
+	}
+}
+
+func TestBuildEditorUpdateFields_StateChanged(t *testing.T) {
+	issue := &model.Issue{
+		Summary:     "Test",
+		Description: "Desc",
+		CustomFields: []model.CustomField{
+			makeCustomField("State", "Open"),
+			makeCustomField("Type", "Bug"),
+		},
+	}
+	parsed := parsedIssue{
+		summary:     "Test",
+		description: "Desc",
+		state:       "Fixed",
+		issueType:   "Bug",
+	}
+
+	fields := buildEditorUpdateFields(issue, parsed)
+	if fields == nil {
+		t.Fatal("expected non-nil fields")
+	}
+	cf := fields["customFields"].([]map[string]any)
+	found := false
+	for _, f := range cf {
+		if f["name"] == "State" {
+			val := f["value"].(map[string]string)
+			if val["name"] == "Fixed" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Error("expected State custom field set to Fixed")
+	}
+}
+
 func makeCustomField(name, value string) model.CustomField {
 	v := []byte(`{"name": "` + value + `"}`)
 	return model.CustomField{Name: name, Value: v}
