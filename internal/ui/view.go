@@ -30,6 +30,9 @@ func (a *App) View() string {
 
 	var panels string
 	panelHeight := a.height - 3
+	if !a.listCollapsed {
+		panelHeight-- // filter bar takes 1 line inside the list panel
+	}
 	hasComments := a.hasComments()
 
 	// Determine detail panel title
@@ -69,7 +72,9 @@ func (a *App) View() string {
 		listWidth := int(float64(a.width) * a.listRatio)
 		innerListWidth := listWidth - 2
 
-		leftPanel := renderTitledPanel(iconList+" Issues", a.list.View(), innerListWidth, panelHeight, a.focus == listPane, lipgloss.Color("78"))
+		filterBar := a.renderFilterBar(innerListWidth)
+		listContent := filterBar + "\n" + a.list.View()
+		leftPanel := renderTitledPanel(iconList+" Issues", listContent, innerListWidth, panelHeight, a.focus == listPane, lipgloss.Color("78"))
 
 		if a.commenting {
 			detailWidth := a.width - listWidth
@@ -120,6 +125,36 @@ func (a *App) hasComments() bool {
 	return a.selected != nil && len(a.selected.Comments) > 0
 }
 
+func (a *App) renderFilterBar(width int) string {
+	type chip struct {
+		key    string
+		label  string
+		active bool
+	}
+
+	chips := []chip{
+		{"1", "Me", a.filterMe},
+		{"2", "Bug", a.filterBug},
+		{"3", "Task", a.filterTask},
+	}
+
+	var parts []string
+	for _, c := range chips {
+		mark := "☐"
+		style := filterInactiveStyle
+		if c.active {
+			mark = "☑"
+			style = filterActiveStyle
+		}
+		parts = append(parts, style.Render(fmt.Sprintf("%s:%s %s", c.key, mark, c.label)))
+	}
+
+	// Gap between Me (assignee) and Bug/Task (type) filters
+	bar := parts[0] + "  " + parts[1] + " " + parts[2]
+
+	return lipgloss.NewStyle().Width(width).Render(bar)
+}
+
 func (a *App) resizePanels() {
 	panelHeight := a.height - 5
 	hasComments := a.hasComments()
@@ -139,7 +174,7 @@ func (a *App) resizePanels() {
 	} else {
 		listOuter := int(float64(a.width) * a.listRatio)
 		listWidth := listOuter - 4
-		a.list.SetSize(listWidth, panelHeight)
+		a.list.SetSize(listWidth, panelHeight-1) // -1 for filter bar line
 
 		if hasComments {
 			remaining := a.width - listOuter
