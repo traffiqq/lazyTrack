@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -118,7 +119,14 @@ func (a *App) View() string {
 		bottom = a.renderStatusBar()
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, panels, bottom)
+	layout := lipgloss.JoinVertical(lipgloss.Left, panels, bottom)
+
+	if a.leaderActive {
+		popup := a.renderLeaderPopup()
+		layout = overlayBottomRight(layout, popup, a.width, a.height)
+	}
+
+	return layout
 }
 
 func (a *App) hasComments() bool {
@@ -153,6 +161,95 @@ func (a *App) renderFilterBar(width int) string {
 	bar := parts[0] + "  " + parts[1] + " " + parts[2]
 
 	return lipgloss.NewStyle().Width(width).Render(bar)
+}
+
+func (a *App) renderLeaderPopup() string {
+	// Two-column layout, alphabetically sorted
+	hints := leaderHints
+	mid := (len(hints) + 1) / 2
+
+	var rows []string
+	for i := 0; i < mid; i++ {
+		left := formatKeyHint(hints[i].key, hints[i].desc)
+		leftPad := lipgloss.NewStyle().Width(14).Render(left)
+		right := ""
+		if i+mid < len(hints) {
+			right = formatKeyHint(hints[i+mid].key, hints[i+mid].desc)
+		}
+		rows = append(rows, leftPad+right)
+	}
+
+	content := strings.Join(rows, "\n")
+
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("99")).
+		Padding(0, 1).
+		Render(content)
+}
+
+func overlayBottomRight(bg, fg string, width, height int) string {
+	bgLines := strings.Split(bg, "\n")
+	fgLines := strings.Split(fg, "\n")
+
+	fgWidth := lipgloss.Width(fg)
+	startRow := len(bgLines) - len(fgLines) - 1 // -1 to stay above status bar
+	startCol := width - fgWidth
+
+	if startRow < 0 {
+		startRow = 0
+	}
+	if startCol < 0 {
+		startCol = 0
+	}
+
+	for i, fgLine := range fgLines {
+		row := startRow + i
+		if row >= len(bgLines) {
+			break
+		}
+		bgLine := bgLines[row]
+		// Pad background line to width if needed
+		bgLineWidth := lipgloss.Width(bgLine)
+		if bgLineWidth < startCol {
+			bgLine += strings.Repeat(" ", startCol-bgLineWidth)
+		}
+		// Replace segment: keep left part, overlay fg, keep right part
+		leftPart := ansiTruncate(bgLine, startCol)
+		bgLines[row] = leftPart + fgLine
+	}
+
+	return strings.Join(bgLines, "\n")
+}
+
+// ansiTruncate truncates a string to maxWidth visible characters,
+// preserving ANSI escape sequences.
+func ansiTruncate(s string, maxWidth int) string {
+	var result strings.Builder
+	visible := 0
+	inEscape := false
+
+	for _, r := range s {
+		if r == '\x1b' {
+			inEscape = true
+			result.WriteRune(r)
+			continue
+		}
+		if inEscape {
+			result.WriteRune(r)
+			if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') {
+				inEscape = false
+			}
+			continue
+		}
+		if visible >= maxWidth {
+			break
+		}
+		result.WriteRune(r)
+		visible++
+	}
+
+	return result.String()
 }
 
 func (a *App) resizePanels() {
