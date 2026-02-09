@@ -1,7 +1,17 @@
-<h1 align="center">lazyTrack</h1>
-<p align="center">
-  <em>A simple terminal UI for managing YouTrack issues</em>
-</p>
+<div align="center">
+
+```
+██╗      █████╗ ███████╗██╗   ██╗████████╗██████╗  █████╗  ██████╗██╗  ██╗
+██║     ██╔══██╗╚══███╔╝╚██╗ ██╔╝╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝
+██║     ███████║  ███╔╝  ╚████╔╝    ██║   ██████╔╝███████║██║     █████╔╝
+██║     ██╔══██║ ███╔╝    ╚██╔╝     ██║   ██╔══██╗██╔══██║██║     ██╔═██╗
+███████╗██║  ██║███████╗   ██║      ██║   ██║  ██║██║  ██║╚██████╗██║  ██╗
+╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝      ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+```
+
+<em>A simple terminal UI for managing YouTrack issues</em>
+
+</div>
 
 <p align="center">
   <a href="https://github.com/traffiqq/lazytrack/releases"><img src="https://img.shields.io/github/downloads/traffiqq/lazytrack/total" alt="GitHub Downloads"></a>
