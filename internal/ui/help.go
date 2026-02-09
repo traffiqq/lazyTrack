@@ -10,20 +10,24 @@ Navigation:
   tab             Cycle panels
   enter           Load issue detail
 
-Actions:
-  c           Create issue
-  e           Edit issue
-  d           Delete issue
-  C           Add comment
+Direct Actions:
   /           Search/filter
   1/2/3       Filter: Me/Bug/Task
-  f           Find issue
-  s           Set state
-  a           Assign issue
-  p           Select project
   #           Go to issue by number
-  n           Mentions
   r           Refresh
+  H/L         Resize panels
+
+Leader Actions (space + key):
+  space c     Create issue
+  space e     Edit issue
+  space d     Delete issue
+  space m     Add comment
+  space s     Set state
+  space a     Assign issue
+  space p     Select project
+  space f     Find issue
+  space n     Mentions
+  space t     Toggle issue list
 
 Dialogs & Comments:
   tab/shift+tab   Navigate fields
@@ -31,8 +35,6 @@ Dialogs & Comments:
   esc             Cancel
 
 General:
-  H/L, ctrl+←/→  Resize panels
-  ctrl+e          Toggle issue list
   ?               Toggle help
   q               Quit`
 
