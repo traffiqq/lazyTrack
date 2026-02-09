@@ -60,7 +60,7 @@ No syntax highlighting in code blocks — chroma is pulled in transitively but w
 
 - `stringPtr(s string) *string` — helper for `ansi.StylePrimitive` pointer fields
 - `buildMarkdownStyle() ansi.StyleConfig` — returns custom style config with `Document.Margin` set to `0`
-- `renderMarkdown(text string, width int) string` — creates renderer, calls `Render()`, trims trailing whitespace, falls back to plain text on error
+- `renderMarkdown(text string, width int) string` — creates renderer with `glamour.WithWordWrap(width)`, calls `Render()`, trims trailing whitespace, falls back to plain text on error
 
 ### Changes to existing files
 
@@ -69,20 +69,28 @@ No syntax highlighting in code blocks — chroma is pulled in transitively but w
 - `renderComments()` — add `width` parameter, replace raw `c.Text` with `renderMarkdown(c.Text, width)`
 
 **`app.go`:**
-- In `issueDetailLoadedMsg` handler (line 234-250): pass `a.detail.Width` to `renderIssueDetail()` and `a.comments.Width` to `renderComments()`. Move `a.resizePanels()` call **before** `SetContent` calls so widths are computed before rendering.
-- Store raw description and comments on the `App` struct (e.g. `selectedDesc string`, `selectedComments []model.Comment`) so they can be re-rendered at a new width on resize.
-- In `tea.WindowSizeMsg` handler (line 185): after `resizePanels()`, re-render markdown content by calling `renderIssueDetail`/`renderComments` with updated widths and `SetContent` again.
+- In `issueDetailLoadedMsg` handler (line 234-250): move `a.resizePanels()` call **before** `SetContent` calls so widths are computed before rendering. Pass `a.detail.Width` to `renderIssueDetail()` and `a.comments.Width` to `renderComments()`.
+- Add a `reRenderContent()` helper method on `App` that checks `a.selected != nil`, then re-calls `renderIssueDetail(a.selected, a.detail.Width)` + `a.detail.SetContent(...)` and (if comments exist) `renderComments(a.selected.Comments, a.comments.Width)` + `a.comments.SetContent(...)`. Uses `a.selected` directly — no duplicate stored state needed since raw text is already on `a.selected.Description` and `a.selected.Comments`.
+- Call `a.reRenderContent()` after `resizePanels()` at every call site where viewport widths change with content already loaded:
+  - `tea.WindowSizeMsg` handler (app.go:185)
+  - Toggle list collapse — space+t (keyhandling.go:247)
+  - Resize left — H key (keyhandling.go:477)
+  - Resize right — L key (keyhandling.go:468)
 
 **`issue_dialog.go`:**
 - In `IssueDialog.renderComments()` (line 723): replace `c.Text` with `renderMarkdown(c.Text, width)` — width is already available as a parameter.
 
 ### Re-rendering on resize
 
-glamour hard-wraps output to the specified width. Unlike plain text (which the viewport soft-wraps), hard-wrapped markdown will overflow or be too short after a terminal resize. Solution:
+glamour hard-wraps output to the specified width. Unlike plain text (which the viewport soft-wraps), hard-wrapped markdown will overflow or be too short after a terminal/panel resize. Solution:
 
-1. Store raw markdown text on the `App` struct when an issue is loaded
-2. On `tea.WindowSizeMsg`, after `resizePanels()` updates viewport widths, re-call `renderMarkdown` + `SetContent` with the new widths
-3. Same pattern for `IssueDialog.renderComments` — it already re-renders on every `View()` call, so no extra work needed there
+1. Extract a `reRenderContent()` helper that reads raw text from `a.selected` (already stored — no duplicate state needed) and re-renders with current viewport widths
+2. Call `reRenderContent()` after `resizePanels()` at all call sites that change viewport widths with content already loaded:
+   - `tea.WindowSizeMsg` (terminal resize)
+   - space+t (toggle list collapse)
+   - H/L keys (resize panel ratio)
+3. Call sites that fetch new issues after `resizePanels()` (notification submit, finder submit, goto) do NOT need re-render — the fetch will re-render with fresh widths
+4. `IssueDialog.renderComments` already re-renders on every `View()` call, so no extra work needed there
 
 ### New file: `internal/ui/markdown_test.go`
 
@@ -93,7 +101,7 @@ glamour hard-wraps output to the specified width. Unlike plain text (which the v
 
 ### No changes to
 
-Model, API, config, key handling. Rendering-layer change with minor state additions in `app.go`.
+Model, API, config, key handling. Rendering-layer change with a helper method addition in `app.go`.
 
 ## Edge Cases
 
