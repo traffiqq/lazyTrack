@@ -28,6 +28,7 @@ Leader Actions (space + key):
   space f     Find issue
   space n     Mentions
   space t     Toggle issue list
+  space v     Vim edit issue
 
 Dialogs & Comments:
   tab/shift+tab   Navigate fields
