@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -388,6 +389,34 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.notifDialog.SetResults(msg.issues)
 		}
 		return a, nil
+
+	case editorFinishedMsg:
+		if msg.tempPath != "" {
+			defer os.Remove(msg.tempPath)
+		}
+		if msg.err != nil {
+			a.err = "Editor error: " + msg.err.Error()
+			return a, nil
+		}
+		parsed, err := parseIssueTempFile(msg.tempPath)
+		if err != nil {
+			a.err = "Parse error: " + err.Error()
+			return a, nil
+		}
+		fields := buildEditorUpdateFields(msg.original, parsed)
+		if fields == nil {
+			return a, nil // nothing changed
+		}
+		issueID := msg.original.IDReadable
+		service := a.service
+		a.loading = true
+		return a, func() tea.Msg {
+			err := service.UpdateIssue(issueID, fields)
+			if err != nil {
+				return errMsg{err}
+			}
+			return issueUpdatedMsg{}
+		}
 
 	case tea.KeyMsg:
 		if m, cmd := a.handleKeyMsg(msg); m != nil {
