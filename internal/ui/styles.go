@@ -61,34 +61,37 @@ var (
 		{"1/2/3", "filter"},
 		{"enter", "open"},
 		{"/", "search"},
-		{"f", "find"},
-		{"c", "create"},
-		{"p", "project"},
 		{"#", "goto"},
 		{"r", "refresh"},
-		{"ctrl+e", "collapse"},
 		{"H/L", "resize"},
+		{"space", "actions"},
 		{"?", "help"},
 		{"q", "quit"},
 	}
 	detailHints = []keyHint{
 		{"j/k", "scroll"},
-		{"e", "edit"},
-		{"d", "delete"},
-		{"C", "comment"},
-		{"s", "state"},
-		{"a", "assign"},
-		{"p", "project"},
 		{"#", "goto"},
 		{"r", "refresh"},
 		{"tab", "cycle"},
-		{"ctrl+e", "collapse"},
 		{"H/L", "resize"},
+		{"space", "actions"},
 		{"q", "quit"},
 	}
 	commentingHints = []keyHint{
 		{"ctrl+s", "submit"},
 		{"esc", "cancel"},
+	}
+	leaderHints = []keyHint{
+		{"a", "assign"},
+		{"c", "create"},
+		{"d", "delete"},
+		{"e", "edit"},
+		{"f", "find"},
+		{"m", "comment"},
+		{"n", "notifs"},
+		{"p", "project"},
+		{"s", "state"},
+		{"t", "toggle"},
 	}
 )
 
