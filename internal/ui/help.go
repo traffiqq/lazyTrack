@@ -16,6 +16,7 @@ Actions:
   d           Delete issue
   C           Add comment
   /           Search/filter
+  1/2/3       Filter: Me/Bug/Task
   f           Find issue
   s           Set state
   a           Assign issue

@@ -58,6 +58,7 @@ type keyHint struct {
 var (
 	listHints = []keyHint{
 		{"j/k", "navigate"},
+		{"1/2/3", "filter"},
 		{"enter", "open"},
 		{"/", "search"},
 		{"f", "find"},
