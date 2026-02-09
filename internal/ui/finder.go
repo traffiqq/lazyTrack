@@ -353,17 +353,8 @@ func (d *FinderDialog) View(width, height int) string {
 func buildFinderQuery(text string, bug, task bool) string {
 	var parts []string
 
-	allChecked := bug && task
-	noneChecked := !bug && !task
-	if !allChecked && !noneChecked {
-		var types []string
-		if bug {
-			types = append(types, "Bug")
-		}
-		if task {
-			types = append(types, "Task")
-		}
-		parts = append(parts, "Type: "+strings.Join(types, ","))
+	if tf := buildTypeFilter(bug, task); tf != "" {
+		parts = append(parts, tf)
 	}
 
 	text = strings.TrimSpace(text)

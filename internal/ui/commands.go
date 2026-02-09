@@ -102,6 +102,22 @@ func (a *App) fetchMentionsCmd() tea.Cmd {
 	}
 }
 
+// buildTypeFilter returns a YouTrack Type filter clause.
+// Returns "Type: Bug" or "Type: Task" when one is set,
+// "Type: Bug,Task" when both are set, or "" when neither is set.
+func buildTypeFilter(bug, task bool) string {
+	switch {
+	case bug && task:
+		return "Type: Bug,Task"
+	case bug:
+		return "Type: Bug"
+	case task:
+		return "Type: Task"
+	default:
+		return ""
+	}
+}
+
 // latestIssueTimestamp returns the maximum Updated timestamp from a slice of issues.
 // Returns 0 if the slice is empty.
 func latestIssueTimestamp(issues []model.Issue) int64 {

@@ -15,7 +15,7 @@ func TestBuildFinderQuery(t *testing.T) {
 			text:     "server migration",
 			bug:      true,
 			task:     true,
-			expected: "server migration",
+			expected: "Type: Bug,Task server migration",
 		},
 		{
 			name:     "text only, no types checked",
@@ -50,7 +50,7 @@ func TestBuildFinderQuery(t *testing.T) {
 			text:     "",
 			bug:      true,
 			task:     true,
-			expected: "",
+			expected: "Type: Bug,Task",
 		},
 		{
 			name:     "no text, no types",
