@@ -350,7 +350,10 @@ func TestApp_NKey_OpensNotificationDialog(t *testing.T) {
 	app.height = 40
 	app.currentUser = &model.User{Login: "testuser"}
 
-	m, cmd := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	// Press space to activate leader mode
+	m, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	// Press n to trigger notifications via leader key
+	m, cmd := m.(*App).Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 	a := m.(*App)
 
 	if !a.notifDialog.active {
@@ -368,7 +371,10 @@ func TestApp_NKey_NoUser(t *testing.T) {
 	app.height = 40
 	// currentUser is nil
 
-	m, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	// Press space to activate leader mode
+	m, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	// Press n to trigger notifications via leader key
+	m, _ = m.(*App).Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 	a := m.(*App)
 
 	if a.notifDialog.active {
