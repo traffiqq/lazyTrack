@@ -138,3 +138,80 @@ func TestIssue_AssigneeValue(t *testing.T) {
 		})
 	}
 }
+
+func TestIssue_StateFieldType(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		expected string
+	}{
+		{
+			name:     "simple state field",
+			json:     `{"customFields":[{"name":"State","$type":"StateIssueCustomField","value":{"name":"Open"}}]}`,
+			expected: "StateIssueCustomField",
+		},
+		{
+			name:     "state machine field",
+			json:     `{"customFields":[{"name":"State","$type":"StateMachineIssueCustomField","value":{"name":"Open"}}]}`,
+			expected: "StateMachineIssueCustomField",
+		},
+		{
+			name:     "no state field",
+			json:     `{"customFields":[{"name":"Type","$type":"SingleEnumIssueCustomField","value":{"name":"Bug"}}]}`,
+			expected: "",
+		},
+		{
+			name:     "no custom fields",
+			json:     `{}`,
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var issue Issue
+			if err := json.Unmarshal([]byte(tt.json), &issue); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if got := issue.StateFieldType(); got != tt.expected {
+				t.Errorf("StateFieldType() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIssue_TypeFieldType(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		expected string
+	}{
+		{
+			name:     "enum type field",
+			json:     `{"customFields":[{"name":"Type","$type":"SingleEnumIssueCustomField","value":{"name":"Bug"}}]}`,
+			expected: "SingleEnumIssueCustomField",
+		},
+		{
+			name:     "no type field",
+			json:     `{"customFields":[{"name":"State","$type":"StateIssueCustomField","value":{"name":"Open"}}]}`,
+			expected: "",
+		},
+		{
+			name:     "no custom fields",
+			json:     `{}`,
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var issue Issue
+			if err := json.Unmarshal([]byte(tt.json), &issue); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if got := issue.TypeFieldType(); got != tt.expected {
+				t.Errorf("TypeFieldType() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}

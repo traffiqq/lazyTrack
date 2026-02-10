@@ -49,10 +49,12 @@ type IssueDialog struct {
 	projectChanged bool
 
 	// Type and State dropdowns
-	typeValues  []model.BundleValue
-	typeCursor  int
-	stateValues []model.BundleValue
-	stateCursor int
+	typeValues   []model.BundleValue
+	typeCursor   int
+	typeFieldType string // actual $type from YouTrack (e.g. "SingleEnumIssueCustomField")
+	stateValues   []model.BundleValue
+	stateCursor   int
+	stateFieldType string // actual $type from YouTrack (e.g. "StateIssueCustomField" or "StateMachineIssueCustomField")
 
 	// Assignee autocomplete
 	assigneeInput    textinput.Model
@@ -115,8 +117,10 @@ func (d *IssueDialog) OpenCreate(projects []model.Project) tea.Cmd {
 
 	d.typeValues = nil
 	d.typeCursor = 0
+	d.typeFieldType = ""
 	d.stateValues = nil
 	d.stateCursor = 0
+	d.stateFieldType = ""
 	d.fieldsLoaded = false
 
 	d.assigneeInput.SetValue("")
@@ -149,8 +153,10 @@ func (d *IssueDialog) OpenEdit(issue *model.Issue, comments []model.Comment) tea
 
 	d.typeValues = nil
 	d.typeCursor = 0
+	d.typeFieldType = ""
 	d.stateValues = nil
 	d.stateCursor = 0
+	d.stateFieldType = ""
 	d.fieldsLoaded = false
 
 	// Pre-populate assignee
@@ -186,6 +192,7 @@ func (d *IssueDialog) SetCustomFields(fields []model.ProjectCustomField, current
 		switch f.Field.Name {
 		case "State":
 			d.stateValues = f.Bundle.Values
+			d.stateFieldType = f.Field.Type
 			d.stateCursor = 0
 			if currentState != "" {
 				for i, v := range f.Bundle.Values {
@@ -197,6 +204,7 @@ func (d *IssueDialog) SetCustomFields(fields []model.ProjectCustomField, current
 			}
 		case "Type":
 			d.typeValues = f.Bundle.Values
+			d.typeFieldType = f.Field.Type
 			d.typeCursor = 0
 			if currentType != "" {
 				for i, v := range f.Bundle.Values {
@@ -303,7 +311,7 @@ func (d *IssueDialog) buildCustomFields() []map[string]any {
 		sv := d.stateValues[d.stateCursor]
 		fields = append(fields, map[string]any{
 			"name":  "State",
-			"$type": "StateIssueCustomField",
+			"$type": d.stateFieldType,
 			"value": map[string]string{
 				"name":  sv.Name,
 				"$type": "StateBundleElement",
@@ -315,7 +323,7 @@ func (d *IssueDialog) buildCustomFields() []map[string]any {
 		tv := d.typeValues[d.typeCursor]
 		fields = append(fields, map[string]any{
 			"name":  "Type",
-			"$type": "SingleEnumIssueCustomField",
+			"$type": d.typeFieldType,
 			"value": map[string]string{
 				"name":  tv.Name,
 				"$type": "EnumBundleElement",
@@ -384,7 +392,9 @@ func (d *IssueDialog) Update(msg tea.Msg) (IssueDialog, tea.Cmd) {
 					d.projectChanged = true
 					d.fieldsLoaded = false
 					d.typeValues = nil
+					d.typeFieldType = ""
 					d.stateValues = nil
+					d.stateFieldType = ""
 				}
 				return *d, nil
 			case "right", "l":
@@ -393,7 +403,9 @@ func (d *IssueDialog) Update(msg tea.Msg) (IssueDialog, tea.Cmd) {
 					d.projectChanged = true
 					d.fieldsLoaded = false
 					d.typeValues = nil
+					d.typeFieldType = ""
 					d.stateValues = nil
+					d.stateFieldType = ""
 				}
 				return *d, nil
 			}

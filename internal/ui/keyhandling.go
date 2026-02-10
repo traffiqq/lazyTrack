@@ -329,6 +329,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			newState := a.stateInput.Value()
 			if newState != "" && a.selected != nil {
 				issueID := a.selected.IDReadable
+				stateFieldType := a.selected.StateFieldType()
 				service := a.service
 				a.settingState = false
 				a.stateInput.Blur()
@@ -338,7 +339,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 						"customFields": []map[string]any{
 							{
 								"name":  "State",
-								"$type": "StateIssueCustomField",
+								"$type": stateFieldType,
 								"value": map[string]string{
 									"name":  newState,
 									"$type": "StateBundleElement",

@@ -120,7 +120,7 @@ func buildEditorUpdateFields(original *model.Issue, parsed parsedIssue) map[stri
 	if parsed.state != original.StateValue() {
 		customFields = append(customFields, map[string]any{
 			"name":  "State",
-			"$type": "StateIssueCustomField",
+			"$type": original.StateFieldType(),
 			"value": map[string]string{
 				"name":  parsed.state,
 				"$type": "StateBundleElement",
@@ -131,7 +131,7 @@ func buildEditorUpdateFields(original *model.Issue, parsed parsedIssue) map[stri
 	if parsed.issueType != original.TypeValue() {
 		customFields = append(customFields, map[string]any{
 			"name":  "Type",
-			"$type": "EnumIssueCustomField",
+			"$type": original.TypeFieldType(),
 			"value": map[string]string{
 				"name":  parsed.issueType,
 				"$type": "EnumBundleElement",

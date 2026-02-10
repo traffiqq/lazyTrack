@@ -91,3 +91,25 @@ func (i *Issue) AssigneeValue() *User {
 	}
 	return nil
 }
+
+// StateFieldType returns the $type of the "State" custom field (e.g. "StateIssueCustomField"
+// or "StateMachineIssueCustomField"). Returns "" if not found.
+func (i *Issue) StateFieldType() string {
+	for _, cf := range i.CustomFields {
+		if cf.Name == "State" {
+			return cf.Type
+		}
+	}
+	return ""
+}
+
+// TypeFieldType returns the $type of the "Type" custom field (e.g. "SingleEnumIssueCustomField").
+// Returns "" if not found.
+func (i *Issue) TypeFieldType() string {
+	for _, cf := range i.CustomFields {
+		if cf.Name == "Type" {
+			return cf.Type
+		}
+	}
+	return ""
+}

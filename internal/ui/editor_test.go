@@ -34,8 +34,8 @@ func TestWriteIssueTempFile(t *testing.T) {
 	}
 	// Add custom fields for state, assignee, type
 	issue.CustomFields = []model.CustomField{
-		makeCustomField("State", "In Progress"),
-		makeCustomField("Type", "Bug"),
+		makeCustomField("State", "StateIssueCustomField", "In Progress"),
+		makeCustomField("Type", "SingleEnumIssueCustomField", "Bug"),
 		makeCustomFieldUser("Assignee", "johndoe", "John Doe"),
 	}
 
@@ -191,8 +191,8 @@ func TestBuildEditorUpdateFields_NoChanges(t *testing.T) {
 		Summary:     "Original",
 		Description: "Desc",
 		CustomFields: []model.CustomField{
-			makeCustomField("State", "Open"),
-			makeCustomField("Type", "Bug"),
+			makeCustomField("State", "StateIssueCustomField", "Open"),
+			makeCustomField("Type", "SingleEnumIssueCustomField", "Bug"),
 			makeCustomFieldUser("Assignee", "alice", "Alice"),
 		},
 	}
@@ -215,8 +215,8 @@ func TestBuildEditorUpdateFields_SummaryChanged(t *testing.T) {
 		Summary:     "Original",
 		Description: "Desc",
 		CustomFields: []model.CustomField{
-			makeCustomField("State", "Open"),
-			makeCustomField("Type", "Bug"),
+			makeCustomField("State", "StateIssueCustomField", "Open"),
+			makeCustomField("Type", "SingleEnumIssueCustomField", "Bug"),
 		},
 	}
 	parsed := parsedIssue{
@@ -240,8 +240,8 @@ func TestBuildEditorUpdateFields_AssigneeCleared(t *testing.T) {
 		Summary:     "Test",
 		Description: "Desc",
 		CustomFields: []model.CustomField{
-			makeCustomField("State", "Open"),
-			makeCustomField("Type", "Bug"),
+			makeCustomField("State", "StateIssueCustomField", "Open"),
+			makeCustomField("Type", "SingleEnumIssueCustomField", "Bug"),
 			makeCustomFieldUser("Assignee", "alice", "Alice"),
 		},
 	}
@@ -278,8 +278,8 @@ func TestBuildEditorUpdateFields_StateChanged(t *testing.T) {
 		Summary:     "Test",
 		Description: "Desc",
 		CustomFields: []model.CustomField{
-			makeCustomField("State", "Open"),
-			makeCustomField("Type", "Bug"),
+			makeCustomField("State", "StateIssueCustomField", "Open"),
+			makeCustomField("Type", "SingleEnumIssueCustomField", "Bug"),
 		},
 	}
 	parsed := parsedIssue{
@@ -297,6 +297,9 @@ func TestBuildEditorUpdateFields_StateChanged(t *testing.T) {
 	found := false
 	for _, f := range cf {
 		if f["name"] == "State" {
+			if f["$type"] != "StateIssueCustomField" {
+				t.Errorf("expected $type StateIssueCustomField, got %v", f["$type"])
+			}
 			val := f["value"].(map[string]string)
 			if val["name"] == "Fixed" {
 				found = true
@@ -308,9 +311,9 @@ func TestBuildEditorUpdateFields_StateChanged(t *testing.T) {
 	}
 }
 
-func makeCustomField(name, value string) model.CustomField {
+func makeCustomField(name, fieldType, value string) model.CustomField {
 	v := []byte(`{"name": "` + value + `"}`)
-	return model.CustomField{Name: name, Value: v}
+	return model.CustomField{Name: name, Type: fieldType, Value: v}
 }
 
 func makeCustomFieldUser(name, login, fullName string) model.CustomField {
